@@ -331,14 +331,14 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		slot = slot_list + slot_nr;
 	else {
 		fprintf(stderr,"Invalid slot number: %d\n", slot_nr);
-		PKCS11_destroy_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 	tok = slot->token;
 
 	if (tok == NULL) {
 		fprintf(stderr,"Found empty token; \n");
-		PKCS11_destroy_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 
@@ -349,7 +349,7 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 
 	if (PKCS11_enumerate_certs(tok, &certs, &count)) {
 		fail("unable to enumerate certificates\n");
-		PKCS11_destroy_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 
@@ -371,7 +371,7 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	if (selected_cert == NULL) {
 		if (s_cert_id != NULL) {
 			fprintf(stderr,"No cert with ID \"%s\" found.\n", s_cert_id);
-			PKCS11_destroy_all_slots(ctx, slot_list, count);
+			PKCS11_release_all_slots(ctx, slot_list, count);
 			return NULL;
 		} else		/* Take the first cert that was found */
 			selected_cert = &certs[0];
@@ -379,7 +379,7 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 
 	x509 = X509_dup(selected_cert->x509);
 
-	PKCS11_destroy_all_slots(ctx, slot_list, count);
+	PKCS11_release_all_slots(ctx, slot_list, count);
 	return x509;
 }
 
@@ -513,14 +513,14 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		slot = slot_list + slot_nr;
 	else {
 		fprintf(stderr,"Invalid slot number: %d\n", slot_nr);
-		PKCS11_destroy_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 	tok = slot->token;
 
 	if (tok == NULL) {
 		fprintf(stderr,"Found empty token; \n");
-		PKCS11_destroy_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 /* Removed for interop with some other pkcs11 libs. */
@@ -532,7 +532,7 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 #endif
 	if (isPrivate && !tok->userPinSet && !tok->readOnly) {
 		fprintf(stderr,"Found slot without user PIN\n");
-		PKCS11_destroy_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 
