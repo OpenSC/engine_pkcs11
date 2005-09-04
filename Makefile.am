@@ -1,6 +1,7 @@
 # Process this file with automake to create Makefile.in
 
-SUBDIRS = . doc src 
+SUBDIRS = . src 
+DIST_SUBDIRS = . doc src 
 
 EXTRA_DIST = bootstrap depcomp 
 
@@ -13,8 +14,3 @@ MAINTAINERCLEANFILES = \
 DEPCLEANFILES = config.log configure
 
 AUTOMAKE_OPTIONS = foreign 1.5
-
-dist: gendoc
-
-gendoc:
-	sh $(srcdir)/doc/export-wiki.sh $(srcdir)/doc
