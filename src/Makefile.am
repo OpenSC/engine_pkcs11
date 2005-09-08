@@ -1,7 +1,7 @@
 # Process this file with automake to create Makefile.in
 
-bundledir = @BUNDLEDIR@/opensc
-enginedir = @libdir@/openssl
+bundledir = $(BUNDLEDIR)/opensc
+enginedir = $(libdir)/openssl
 
 MAINTAINERCLEANFILES = Makefile.in
 
@@ -16,9 +16,9 @@ OPENSSL_CFLAGS = \
 
 engine_pkcs11_la_SOURCES = \
 	hw_pkcs11.c engine_pkcs11.c engine_pkcs11.h 
-engine_pkcs11_la_CFLAGS = $(OPENSSL_CFLAGS) -I$(srcdir)/../libp11 @LIBP11_CFLAGS@
-engine_pkcs11_la_LIBADD = @ENGINE_LINK@ @LIBP11_LIBS@
-engine_pkcs11_la_LDFLAGS = @OPENSSL_LDFLAGS@ -module -avoid-version
+engine_pkcs11_la_CFLAGS = $(OPENSSL_CFLAGS) $(LIBP11_CFLAGS) -I$(srcdir)/../libp11 
+engine_pkcs11_la_LIBADD = $(ENGINE_LINK) $(OPENSSL_LIBS) $(LIBP11_LIBS)
+engine_pkcs11_la_LDFLAGS = -module -avoid-version
 
 install-exec-local: install-engineLTLIBRARIES
 if HAVE_BUNDLES
