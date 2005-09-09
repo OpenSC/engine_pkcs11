@@ -268,6 +268,7 @@ AM_CONDITIONAL(HAVE_BUNDLES, test "x$with_bundles" = "xyes")
 
 AC_OUTPUT([
 Makefile
+aclocal/Makefile
 doc/Makefile
 src/Makefile
 ])
