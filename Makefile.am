@@ -1,7 +1,7 @@
 # Process this file with automake to create Makefile.in
 
-SUBDIRS = . src 
-DIST_SUBDIRS = . doc src 
+SUBDIRS = . aclocal src 
+DIST_SUBDIRS = . aclocal doc src 
 
 EXTRA_DIST = bootstrap depcomp 
 
