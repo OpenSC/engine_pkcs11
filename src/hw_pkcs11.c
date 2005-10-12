@@ -59,15 +59,16 @@
  *
  */
 
-#include <libp11.h>
 #include <stdio.h>
 #include <string.h>
+#include <openssl/crypto.h>
+#include <openssl/objects.h>
 #include <openssl/engine.h>
+#include <openssl/dso.h>
 #ifndef ENGINE_CMD_BASE
 #error did not get engine.h
 #endif
-#include <openssl/crypto.h>
-#include <openssl/dso.h>
+#include <libp11.h>
 #include "engine_pkcs11.h"
 
 #define PKCS11_ENGINE_ID "pkcs11"

@@ -29,6 +29,7 @@
 #include <string.h>
 #include <openssl/crypto.h>
 #include <openssl/objects.h>
+#include <openssl/engine.h>
 #include <libp11.h>
 #include "engine_pkcs11.h"
 
@@ -53,17 +54,7 @@ static char *pin = NULL;
 
 int verbose = 0;
 
-#if defined(_WIN32)
-#define PKCS11_DEFAULT_MODULE_NAME	"opensc-pkcs11"
-#elif defined(HAVE_DLFCN_H) && defined(__APPLE__)
-#define PKCS11_DEFAULT_MODULE_NAME	"opensc-pkcs11.so"
-#elif defined(__APPLE__)
-#define PKCS11_DEFAULT_MODULE_NAME	"opensc-pkcs11.bundle"
-#else
-#define PKCS11_DEFAULT_MODULE_NAME	"opensc-pkcs11.so"
-#endif
-
-char *module = PKCS11_DEFAULT_MODULE_NAME;
+char *module = NULL;
 int default_module = 1;
 
 int set_module(const char *modulename)
