@@ -1,6 +1,5 @@
 # Process this file with automake to create Makefile.in
 
-bundledir = $(BUNDLEDIR)/opensc
 enginedir = $(libdir)/engines
 
 MAINTAINERCLEANFILES = Makefile.in
@@ -19,14 +18,3 @@ engine_pkcs11_la_SOURCES = \
 engine_pkcs11_la_CFLAGS = $(OPENSSL_CFLAGS) $(LIBP11_CFLAGS) -I$(srcdir)/../libp11 
 engine_pkcs11_la_LIBADD = $(ENGINE_LINK) $(OPENSSL_LIBS) $(LIBP11_LIBS)
 engine_pkcs11_la_LDFLAGS = -module -avoid-version
-
-install-exec-local: install-engineLTLIBRARIES
-if HAVE_BUNDLES
-	-${top_srcdir}/libtool-bundle $(DESTDIR)$(enginedir)/engine_pkcs11.so \
-		$(DESTDIR)$(bundledir)/
-endif
-
-uninstall-local: uninstall-engineLTLIBRARIES
-if HAVE_BUNDLES
-	rm -rf $(DESTDIR)$(bundledir)/engine_pkcs11.bundle/
-endif

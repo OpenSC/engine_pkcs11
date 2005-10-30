@@ -264,8 +264,6 @@ fi
 LDFLAGS="$saved_LDFLAGS"
 AC_SUBST(OPENSSL_LDFLAGS)
 
-AM_CONDITIONAL(HAVE_BUNDLES, test "x$with_bundles" = "xyes")
-
 AC_OUTPUT([
 Makefile
 aclocal/Makefile
