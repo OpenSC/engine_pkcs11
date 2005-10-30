@@ -125,7 +125,7 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin, i
 int pkcs11_finish(ENGINE * engine)
 {
 	if (ctx) {
-		PKCS11_CTX_free(ctx);
+		PKCS11_CTX_unload(ctx);
 	}
 	if (pin != NULL) {
 		OPENSSL_cleanse(pin, strlen(pin));
