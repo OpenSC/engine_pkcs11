@@ -1,7 +1,7 @@
 # Process this file with automake to create Makefile.in
 
 bundledir = $(BUNDLEDIR)/opensc
-enginedir = $(libdir)/openssl
+enginedir = $(libdir)/engines
 
 MAINTAINERCLEANFILES = Makefile.in
 
