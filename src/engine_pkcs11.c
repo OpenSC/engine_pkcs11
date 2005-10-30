@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002 Juha YrjÃ¶lÃ¤.  All rights reserved.
+ * Copyright (c) 2002 Juha Yrjölä.  All rights reserved.
  * Copyright (c) 2001 Markus Friedl.
  * Copyright (c) 2002 Olaf Kirch
  * Copyright (c) 2003 Kevin Stefanik
@@ -208,6 +208,107 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 	return 1;
 }
 
+/* parse string containing slot and id information */
+
+int parse_slot_id_string(const char *slot_id, int *slot, 
+		unsigned char *id, size_t *id_len)
+{
+	int n,i;
+
+	if (! slot_id)
+		return 0;
+
+	/* support for several formats */
+
+	/* first: pure hex number (id, slot is 0) */
+	if (strspn(slot_id,"01234567890ABCDEFabcdef") == strlen(slot_id)) {
+		/* ah, easiest case: only hex. */
+		if ((strlen(slot_id)+1) /2 > *id_len) {
+			fprintf(stderr,"id string too long!\n");
+			return 0; 
+		}
+		*slot = 0;
+		return hex_to_bin(slot_id, id, id_len);
+	}
+
+	/* second: slot:id. slot is an digital int. */
+	if (sscanf(slot_id,"%d",&n) == 1) {
+		i = strspn(slot_id,"0123456789");
+		
+		if (slot_id[i] != ':') {
+			fprintf(stderr,"could not parse string!\n");
+			return 0;
+		}
+		i++;
+		if (strspn(slot_id+i,"0123456789")+i != strlen(slot_id)) {
+			fprintf(stderr,"could not parse string!\n");
+			return 0;
+		}
+		/* ah, rest is hex */
+		if ((strlen(slot_id)-i+1) /2 > *id_len) {
+			fprintf(stderr,"id string too long!\n");
+			return 0; 
+		}
+		*slot = n;
+		return hex_to_bin(slot_id+i, id, id_len);
+	}
+
+	/* third: id_<id>  */
+	if ( strncmp(slot_id, "id_",3) == 0) {
+		if (strspn(slot_id+3,"0123456789")+3 != strlen(slot_id)) {
+			fprintf(stderr,"could not parse string!\n");
+			return 0;
+		}
+		/* ah, rest is hex */
+		if ((strlen(slot_id)-3+1)/2 > *id_len) {
+			fprintf(stderr,"id string too long!\n");
+			return 0; 
+		}
+		*slot = 0;
+		return hex_to_bin(slot_id+3, id, id_len);
+	}
+
+	/* last try: it has to be slot_<slot> and then "-id_<cert>" */
+
+	if (strncmp(slot_id, "slot_", 5) != 0) {
+		fprintf(stderr, "format not recognized!\n");
+		return 0;
+	}
+
+	/* slot is an digital int. */
+	if (sscanf(slot_id+5,"%d",&n) != 1) {
+		fprintf(stderr, "slot number not deciphered!\n");
+		return 0;
+	} 
+
+	i = strspn(slot_id+5,"0123456789");
+		
+	if (slot_id[i+5] != '-') {
+		fprintf(stderr,"could not parse string!\n");
+		return 0;
+	}
+
+	i=5+i+1;
+
+	/* now followed by "id_" */
+	if ( strncmp(slot_id+i, "id_",3) == 0) {
+		if (strspn(slot_id+i+3,"0123456789")+3+i != strlen(slot_id)) {
+			fprintf(stderr,"could not parse string!\n");
+			return 0;
+		}
+		/* ah, rest is hex */
+		if ((strlen(slot_id)-i-3+1)/2 > *id_len) {
+			fprintf(stderr,"id string too long!\n");
+			return 0; 
+		}
+		*slot = n;
+		return hex_to_bin(slot_id+i+3, id, id_len);
+	}
+
+	fprintf(stderr,"could not parse string!\n");
+	return 0;
+}
+
 #define MAX_VALUE_LEN	200
 
 /* prototype for OpenSSL ENGINE_load_cert */
@@ -221,62 +322,23 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	X509 *x509;
 	unsigned int count, n, m;
 	unsigned char cert_id[MAX_VALUE_LEN / 2];
-	char *s_cert_id = NULL, buf[MAX_VALUE_LEN];
 	size_t cert_id_len = sizeof(cert_id);
 	int slot_nr = -1;
 	char flags[64];
 
-	/* Parse s_slot_cert_id: [slot_<slotNr>][-][id_<certID>] or NULL,
-	   with slotNr in decimal (0 = first slot, ...), and certID in hex.
-	    E.g."slot_1" or "id_46" or "slot_1-id_46 */
-	while (s_slot_cert_id != NULL && *s_slot_cert_id != '\0') {
-		char *p_sep1, *p_sep2;
-		char val[MAX_VALUE_LEN];
-		int val_len;;
-
-		p_sep1 = strchr(s_slot_cert_id, '_');
-		if (p_sep1 == NULL) {
-			fprintf(stderr,"No \'_\' found in \"-cert\" option \"%s\"\n", s_slot_cert_id);
-			fprintf(stderr,"Format: [slot_<slotNr>][-][id_<certID>]\n");
-			fprintf(stderr,"  with slotNr = 0, 1, ... and certID = a hex string\n");
-			return NULL;
-		}
-
-		p_sep2 = strchr(p_sep1, '-');
-		if (p_sep2 == NULL)
-			p_sep2 = p_sep1 + strlen(p_sep1);
-
-		/* val = the string between the _ and the - (or '\0') */
-		val_len = p_sep2 - p_sep1 - 1;
-		if (val_len >= MAX_VALUE_LEN || val_len == 0)
-			fail("Too long or empty value after the \'-\' sign\n");
-		memcpy(val, p_sep1 + 1, val_len);
-		val[val_len] = '\0';
- 		if (strncasecmp(s_slot_cert_id, "slot", p_sep1 - s_slot_cert_id) == 0) {
-			if (val_len >= 3) {
-				fprintf(stderr,"Slot number \"%s\" should be a small integer\n", val);
-				return NULL;
-			}
-			slot_nr = atoi(val);
-			if (slot_nr == 0 && val[0] != '0') {
-				fprintf(stderr,"Slot number \"%s\" should be an integer\n", val);
-				return NULL;
-			}
-		} else if (strncasecmp(s_slot_cert_id, "id", p_sep1 - s_slot_cert_id)
-			   == 0) {
-			if (!hex_to_bin(val, cert_id, &cert_id_len)) {
-				fprintf(stderr,"cert id \"%s\" should be a hex string\n", val);
-				return NULL;
-			}
-			strcpy(buf, val);
-			s_cert_id = buf;
-		} else {
-			memcpy(val, s_slot_cert_id, p_sep1 - s_slot_cert_id);
-			val[p_sep1 - s_slot_cert_id] = '\0';
-			fprintf(stderr,"Now allowed in -cert: \"%s\"\n", val);
-			return NULL;
-		}
-		s_slot_cert_id = (*p_sep2 == '\0' ? p_sep2 : p_sep2 + 1);
+	n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
+			cert_id, &cert_id_len);
+	if (!n) {
+		fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
+		fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
+		fprintf(stderr,"and <id> is the id number as hex string.\n");
+		return NULL;
+	}
+	if(verbose) {
+		fprintf(stderr,"Looking in slot %d for certificate: ", slot_nr);
+		for (n=0; n < cert_id_len; n++)
+			fprintf(stderr,"%02x",cert_id[n]);
+		fprintf(stderr,"\n");
 	}
 
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
@@ -352,20 +414,14 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 
 		if (cert_id_len != 0 && k->id_len == cert_id_len &&
 		    memcmp(k->id, cert_id, cert_id_len) == 0) {
-			if(verbose) {
-				fprintf(stderr,"        ID = %s\n", s_cert_id);
-			}
 			selected_cert = k;
 		}
 	}
 
 	if (selected_cert == NULL) {
-		if (s_cert_id != NULL) {
-			fprintf(stderr,"No cert with ID \"%s\" found.\n", s_cert_id);
-			PKCS11_release_all_slots(ctx, slot_list, count);
-			return NULL;
-		} else		/* Take the first cert that was found */
-			selected_cert = &certs[0];
+		fprintf(stderr,"certificate not found.\n");
+		PKCS11_release_all_slots(ctx, slot_list, count);
+		return NULL;
 	}
 
 	x509 = X509_dup(selected_cert->x509);
@@ -401,63 +457,23 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	EVP_PKEY *pk;
 	unsigned int count, n, m;
 	unsigned char key_id[MAX_VALUE_LEN / 2];
-	char *s_key_id = NULL, buf[MAX_VALUE_LEN];
 	size_t key_id_len = sizeof(key_id);
 	int slot_nr = -1;
 	char flags[64];
 
-	/* Parse s_slot_key_id: [slot_<slotNr>][-][id_<keyID>] or NULL,
-	   with slotNr in decimal (0 = first slot, ...), and keyID in hex.
-	   E.g. "slot_1" or "id_46" or "slot_1-id_46 */
-	while (s_slot_key_id != NULL && *s_slot_key_id != '\0') {
-		char *p_sep1, *p_sep2;
-		char val[MAX_VALUE_LEN];
-		int val_len;;
-
-		p_sep1 = strchr(s_slot_key_id, '_');
-		if (p_sep1 == NULL) {
-			fprintf(stderr,"No \'_\' found in \"-key\" option \"%s\"\n", s_slot_key_id);
-			fprintf(stderr,"Format: [slot_<slotNr>][-][id_<keyID>]\n");
-			fprintf(stderr,"  with slotNr = 0, 1, ... and keyID = a hex string\n");
-			return NULL;
-		}
-
-		p_sep2 = strchr(p_sep1, '-');
-		if (p_sep2 == NULL)
-			p_sep2 = p_sep1 + strlen(p_sep1);
-
-		/* val = the string between the _ and the - (or '\0') */
-		val_len = p_sep2 - p_sep1 - 1;
-		if (val_len >= MAX_VALUE_LEN || val_len == 0)
-			fail("Too long or empty value after the \'-\' sign\n");
-		memcpy(val, p_sep1 + 1, val_len);
-		val[val_len] = '\0';
-
-		if (strncasecmp(s_slot_key_id, "slot", p_sep1 - s_slot_key_id) == 0) {
-			if (val_len >= 3) {
-				fprintf(stderr,"Slot number \"%s\" should be a small integer\n", val);
-				return NULL;
-			}
-			slot_nr = atoi(val);
-			if (slot_nr == 0 && val[0] != '0') {
-				fprintf(stderr,"Slot number \"%s\" should be an integer\n", val);
-				return NULL;
-			}
-		} else if (strncasecmp(s_slot_key_id, "id", p_sep1 - s_slot_key_id)
-			   == 0) {
-			if (!hex_to_bin(val, key_id, &key_id_len)) {
-				fprintf(stderr,"Key id \"%s\" should be a hex string\n", val);
-				return NULL;
-			}
-			strcpy(buf, val);
-			s_key_id = buf;
-		} else {
-			memcpy(val, s_slot_key_id, p_sep1 - s_slot_key_id);
-			val[p_sep1 - s_slot_key_id] = '\0';
-			fprintf(stderr,"Now allowed in -key: \"%s\"\n", val);
-			return NULL;
-		}
-		s_slot_key_id = (*p_sep2 == '\0' ? p_sep2 : p_sep2 + 1);
+	n = parse_slot_id_string(s_slot_key_id, &slot_nr,
+			key_id, &key_id_len);
+	if (!n) {
+		fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
+		fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
+		fprintf(stderr,"and <id> is the id number as hex string.\n");
+		return NULL;
+	}
+	if(verbose) {
+		fprintf(stderr,"Looking in slot %d for key: ", slot_nr);
+		for (n=0; n < key_id_len; n++)
+			fprintf(stderr,"%02x",key_id[n]);
+		fprintf(stderr,"\n");
 	}
 
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
@@ -619,19 +635,13 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		}
 		if (key_id_len != 0 && k->id_len == key_id_len &&
 		    memcmp(k->id, key_id, key_id_len) == 0) {
-			if(verbose) {
-				fprintf(stderr,"        ID = %s\n", s_key_id);
-			}
 			selected_key = k;
 		}
 	}
 
 	if (selected_key == NULL) {
-		if (s_key_id != NULL) {
-			fprintf(stderr,"No key with ID \"%s\" found.\n", s_key_id);
-			return NULL;
-		} else		/* Take the first key that was found */
-			selected_key = &keys[0];
+		fprintf(stderr,"key not found.\n");
+		return NULL;
 	}
 
 	if (isPrivate) {
