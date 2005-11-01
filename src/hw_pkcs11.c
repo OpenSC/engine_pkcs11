@@ -168,7 +168,7 @@ static int bind_helper(ENGINE * e)
 	    !ENGINE_set_cmd_defns(e, pkcs11_cmd_defns) ||
 	    !ENGINE_set_name(e, PKCS11_ENGINE_NAME) ||
 #ifndef OPENSSL_NO_RSA
-	    !ENGINE_set_RSA(e, pkcs11_get_rsa_method()) ||
+	    !ENGINE_set_RSA(e, PKCS11_get_rsa_method()) ||
 #endif
 #ifndef OPENSSL_NO_DSA
 	    !ENGINE_set_DSA(e, DSA_get_default_method()) ||
