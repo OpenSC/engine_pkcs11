@@ -240,6 +240,11 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 			return 0;
 		}
 		i++;
+		if (slot_id[i] == 0) {
+			*slot = n;
+			*id_len = 0;
+			return 1;
+		}
 		if (strspn(slot_id+i,"0123456789")+i != strlen(slot_id)) {
 			fprintf(stderr,"could not parse string!\n");
 			return 0;
@@ -282,6 +287,12 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 	} 
 
 	i = strspn(slot_id+5,"0123456789");
+
+	if (slot_id[i+5] == 0) {
+		*slot = n;
+		*id_len = 0;
+		return 1;
+	}
 		
 	if (slot_id[i+5] != '-') {
 		fprintf(stderr,"could not parse string!\n");
@@ -411,7 +422,7 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	if(verbose) {
 		fprintf(stderr,"Found %u cert%s:\n", count, (count <= 1) ? "" : "s");
 	}
-	if (s_slot_cert_id && *s_slot_cert_id) {
+	if ((s_slot_cert_id && *s_slot_cert_id) || (cert_id_len == 0)) {
 		for (n = 0; n < count; n++) {
 			PKCS11_CERT *k = certs + n;
 
