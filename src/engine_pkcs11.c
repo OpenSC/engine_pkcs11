@@ -126,6 +126,8 @@ int pkcs11_finish(ENGINE * engine)
 {
 	if (ctx) {
 		PKCS11_CTX_unload(ctx);
+		PKCS11_CTX_free(ctx);
+		ctx = NULL;
 	}
 	if (pin != NULL) {
 		OPENSSL_cleanse(pin, strlen(pin));
