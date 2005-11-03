@@ -326,19 +326,21 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	int slot_nr = -1;
 	char flags[64];
 
-	n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
-			cert_id, &cert_id_len);
-	if (!n) {
-		fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
-		fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
-		fprintf(stderr,"and <id> is the id number as hex string.\n");
-		return NULL;
-	}
-	if(verbose) {
-		fprintf(stderr,"Looking in slot %d for certificate: ", slot_nr);
-		for (n=0; n < cert_id_len; n++)
-			fprintf(stderr,"%02x",cert_id[n]);
-		fprintf(stderr,"\n");
+	if (s_slot_cert_id && *s_slot_cert_id) {
+		n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
+				cert_id, &cert_id_len);
+		if (!n) {
+			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
+			fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
+			fprintf(stderr,"and <id> is the id number as hex string.\n");
+			return NULL;
+		}
+		if(verbose) {
+			fprintf(stderr,"Looking in slot %d for certificate: ", slot_nr);
+			for (n=0; n < cert_id_len; n++)
+				fprintf(stderr,"%02x",cert_id[n]);
+			fprintf(stderr,"\n");
+		}
 	}
 
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
@@ -409,13 +411,17 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	if(verbose) {
 		fprintf(stderr,"Found %u cert%s:\n", count, (count <= 1) ? "" : "s");
 	}
-	for (n = 0; n < count; n++) {
-		PKCS11_CERT *k = certs + n;
+	if (s_slot_cert_id && *s_slot_cert_id) {
+		for (n = 0; n < count; n++) {
+			PKCS11_CERT *k = certs + n;
 
-		if (cert_id_len != 0 && k->id_len == cert_id_len &&
-		    memcmp(k->id, cert_id, cert_id_len) == 0) {
-			selected_cert = k;
+			if (cert_id_len != 0 && k->id_len == cert_id_len &&
+		    		memcmp(k->id, cert_id, cert_id_len) == 0) {
+				selected_cert = k;
+			}
 		}
+	} else {
+		selected_cert = certs; /* use first */
 	}
 
 	if (selected_cert == NULL) {
@@ -461,19 +467,21 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	int slot_nr = -1;
 	char flags[64];
 
-	n = parse_slot_id_string(s_slot_key_id, &slot_nr,
+	if (s_slot_key_id && *s_slot_key_id) {
+		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
 			key_id, &key_id_len);
-	if (!n) {
-		fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
-		fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
-		fprintf(stderr,"and <id> is the id number as hex string.\n");
-		return NULL;
-	}
-	if(verbose) {
-		fprintf(stderr,"Looking in slot %d for key: ", slot_nr);
-		for (n=0; n < key_id_len; n++)
-			fprintf(stderr,"%02x",key_id[n]);
-		fprintf(stderr,"\n");
+		if (!n) {
+			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
+			fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
+			fprintf(stderr,"and <id> is the id number as hex string.\n");
+			return NULL;
+		}
+		if(verbose) {
+			fprintf(stderr,"Looking in slot %d for key: ", slot_nr);
+			for (n=0; n < key_id_len; n++)
+				fprintf(stderr,"%02x",key_id[n]);
+			fprintf(stderr,"\n");
+		}
 	}
 
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
@@ -626,17 +634,21 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	if(verbose) {
 		fprintf(stderr,"Found %u key%s:\n", count, (count <= 1) ? "" : "s");
 	}
-	for (n = 0; n < count; n++) {
-		PKCS11_KEY *k = keys + n;
+	if (s_slot_key_id && *s_slot_key_id) {
+		for (n = 0; n < count; n++) {
+			PKCS11_KEY *k = keys + n;
 
-		if(verbose) {
-			fprintf(stderr,"  %2u %c%c %s\n", n + 1,
-			       k->isPrivate ? 'P' : ' ', k->needLogin ? 'L' : ' ', k->label);
+			if(verbose) {
+				fprintf(stderr,"  %2u %c%c %s\n", n + 1,
+				       k->isPrivate ? 'P' : ' ', k->needLogin ? 'L' : ' ', k->label);
+			}
+			if (key_id_len != 0 && k->id_len == key_id_len &&
+			    memcmp(k->id, key_id, key_id_len) == 0) {
+				selected_key = k;
+			}
 		}
-		if (key_id_len != 0 && k->id_len == key_id_len &&
-		    memcmp(k->id, key_id, key_id_len) == 0) {
-			selected_key = k;
-		}
+	} else {
+		selected_key = keys; /* use first */
 	}
 
 	if (selected_key == NULL) {
