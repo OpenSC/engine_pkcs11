@@ -34,7 +34,7 @@ AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([errno.h fcntl.h malloc.h stdlib.h inttypes.h string.h strings.h sys/time.h unistd.h locale.h getopt.h dlfcn.h utmp.h])
 
-PKG_CHECK_MODULES([LIBP11], [libp11])
+PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.1])
 
 dnl The big mess with OpenSSL
 saved_LIBS="$LIBS"
