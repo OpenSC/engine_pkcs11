@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 # Require autoconf 2.52
 AC_PREREQ(2.52)
 
-AC_INIT(engine_pkcs11, WIP)
+AC_INIT(engine_pkcs11, 0.1.3)
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
@@ -34,7 +34,7 @@ AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([errno.h fcntl.h malloc.h stdlib.h inttypes.h string.h strings.h sys/time.h unistd.h locale.h getopt.h dlfcn.h utmp.h])
 
-PKG_CHECK_MODULES([LIBP11], [libp11])
+PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.1])
 
 dnl The big mess with OpenSSL
 saved_LIBS="$LIBS"
