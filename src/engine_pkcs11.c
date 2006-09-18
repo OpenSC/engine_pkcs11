@@ -220,9 +220,12 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 		return 0;
 
 	/* support for several formats */
+#define HEXDIGITS "01234567890ABCDEFabcdef"
+#define DIGITS "0123456789"
+
 
 	/* first: pure hex number (id, slot is 0) */
-	if (strspn(slot_id,"01234567890ABCDEFabcdef") == strlen(slot_id)) {
+	if (strspn(slot_id,HEXDIGITS) == strlen(slot_id)) {
 		/* ah, easiest case: only hex. */
 		if ((strlen(slot_id)+1) /2 > *id_len) {
 			fprintf(stderr,"id string too long!\n");
@@ -234,7 +237,7 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 
 	/* second: slot:id. slot is an digital int. */
 	if (sscanf(slot_id,"%d",&n) == 1) {
-		i = strspn(slot_id,"0123456789");
+		i = strspn(slot_id,DIGITS);
 		
 		if (slot_id[i] != ':') {
 			fprintf(stderr,"could not parse string!\n");
@@ -246,7 +249,7 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 			*id_len = 0;
 			return 1;
 		}
-		if (strspn(slot_id+i,"0123456789")+i != strlen(slot_id)) {
+		if (strspn(slot_id+i,HEXDIGITS)+i != strlen(slot_id)) {
 			fprintf(stderr,"could not parse string!\n");
 			return 0;
 		}
@@ -261,7 +264,7 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 
 	/* third: id_<id>  */
 	if ( strncmp(slot_id, "id_",3) == 0) {
-		if (strspn(slot_id+3,"0123456789")+3 != strlen(slot_id)) {
+		if (strspn(slot_id+3,HEXDIGITS)+3 != strlen(slot_id)) {
 			fprintf(stderr,"could not parse string!\n");
 			return 0;
 		}
@@ -287,7 +290,7 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 		return 0;
 	} 
 
-	i = strspn(slot_id+5,"0123456789");
+	i = strspn(slot_id+5,DIGITS);
 
 	if (slot_id[i+5] == 0) {
 		*slot = n;
@@ -304,7 +307,7 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 
 	/* now followed by "id_" */
 	if ( strncmp(slot_id+i, "id_",3) == 0) {
-		if (strspn(slot_id+i+3,"0123456789")+3+i != strlen(slot_id)) {
+		if (strspn(slot_id+i+3,HEXDIGITS)+3+i != strlen(slot_id)) {
 			fprintf(stderr,"could not parse string!\n");
 			return 0;
 		}
