@@ -175,7 +175,7 @@ int main(void)
 	],
 	[
 		ENGINE_MSG=no
-	]);
+	])
 fi
 LIBS="$saved_LIBS"
 AC_SUBST(ENGINE_LINK)
