@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002 Juha Yrjölä.  All rights reserved.
+ * Copyright (c) 2002 Juha YrjÃ¶lÃ¤.  All rights reserved.
  * Copyright (c) 2001 Markus Friedl.
  * Copyright (c) 2002 Olaf Kirch
  * Copyright (c) 2003 Kevin Stefanik
