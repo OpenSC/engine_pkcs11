@@ -145,6 +145,7 @@ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p, void (*f) ()
 
 static int (*orig_finish) (RSA * rsa);
 
+#if 0
 static int pkcs11_engine_rsa_finish(RSA * rsa)
 {
 
@@ -155,6 +156,7 @@ static int pkcs11_engine_rsa_finish(RSA * rsa)
 	return 1;
 
 }
+#endif
 
 /* This internal function is used by ENGINE_pkcs11() and possibly by the
  * "dynamic" ENGINE support too */
