@@ -42,7 +42,7 @@
 /** The maximum length of an internally-allocated PIN */
 #define MAX_PIN_LENGTH   32
 
-PKCS11_CTX *ctx;
+static PKCS11_CTX *ctx;
 
 /** 
  * The PIN used for login. May be assigend by set_pin function, or by the
@@ -52,15 +52,13 @@ PKCS11_CTX *ctx;
  */ 
 static char *pin = NULL;
 
-int verbose = 0;
+static int verbose = 0;
 
-char *module = NULL;
-int default_module = 1;
+static char *module = NULL;
 
 int set_module(const char *modulename)
 {
 	module = strdup (modulename);
-	default_module = 0;
 	return 1;
 }
 
@@ -156,8 +154,9 @@ int pkcs11_rsa_finish(RSA * rsa)
 		free(pin);
 		pin = NULL;
 	}
-	if (!default_module && module) {
+	if (module) {
 		free(module);
+		module = NULL;
 	}
 	/* need to free RSA_ex_data? */
 	return 1;
@@ -211,7 +210,7 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 
 /* parse string containing slot and id information */
 
-int parse_slot_id_string(const char *slot_id, int *slot, 
+static int parse_slot_id_string(const char *slot_id, int *slot, 
 		unsigned char *id, size_t *id_len)
 {
 	int n,i;
@@ -329,7 +328,7 @@ int parse_slot_id_string(const char *slot_id, int *slot,
 /* prototype for OpenSSL ENGINE_load_cert */
 /* used by load_cert_ctrl via ENGINE_ctrl for now */
 
-X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
+static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_TOKEN *tok;
@@ -468,7 +467,7 @@ int load_cert_ctrl(ENGINE *e, void *p)
 }
 
 
-EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
+static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			  UI_METHOD * ui_method, void *callback_data, int isPrivate)
 {
 	PKCS11_SLOT *slot_list, *slot;
