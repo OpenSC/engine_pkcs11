@@ -418,7 +418,7 @@ X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	}
 
 	if (PKCS11_enumerate_certs(tok, &certs, &count)) {
-		fail("unable to enumerate certificates\n");
+		fprintf(stderr,"unable to enumerate certificates\n");
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
