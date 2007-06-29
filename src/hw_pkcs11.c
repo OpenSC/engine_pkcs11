@@ -140,12 +140,12 @@ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p, void (*f) ()
 	return 0;
 }
 
+#if 0
 /* set up default rsa_meth_st with overloaded rsa functions */
 /* the actual implementation needs to be in another object */
 
 static int (*orig_finish) (RSA * rsa);
 
-#if 0
 static int pkcs11_engine_rsa_finish(RSA * rsa)
 {
 
