@@ -40,7 +40,7 @@
 #define fail(msg) { fprintf(stderr,msg); return NULL;}
 
 /** The maximum length of an internally-allocated PIN */
-#define MAX_PIN_LENGTH   12
+#define MAX_PIN_LENGTH   32
 
 PKCS11_CTX *ctx;
 
