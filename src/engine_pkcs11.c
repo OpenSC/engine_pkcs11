@@ -130,7 +130,7 @@ int pkcs11_finish(ENGINE * engine)
 		ctx = NULL;
 	}
 	if (pin != NULL) {
-		OPENSSL_cleanse(pin, strlen(pin));
+		OPENSSL_cleanse(pin, sizeof(pin));
 		free(pin);
 		pin = NULL;
 	}
@@ -616,7 +616,7 @@ EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
                 if (PKCS11_login(slot, 0, pin)) {
                         /* Login failed, so free the PIN if present */
                         if(pin != NULL) {
-				OPENSSL_cleanse(pin, strlen(pin));
+				OPENSSL_cleanse(pin, sizeof(pin));
                                 free(pin);
                                 pin = NULL;
                         }
