@@ -92,7 +92,7 @@ int set_pin(const char *_pin)
 	return (pin != NULL);
 }
 
-int inc_verbose()
+int inc_verbose(void)
 {
 	verbose++;
 	return 1;

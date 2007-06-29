@@ -39,7 +39,7 @@ int set_pin(const char *pin);
 
 int load_cert_ctrl(ENGINE *e, void *p);
 
-int inc_verbose();
+int inc_verbose(void);
 
 int pkcs11_finish(ENGINE * engine);
 
