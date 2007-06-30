@@ -211,7 +211,7 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 /* parse string containing slot and id information */
 
 static int parse_slot_id_string(const char *slot_id, int *slot, 
-		unsigned char *id, size_t *id_len)
+		unsigned char *id, size_t *id_len, char ** label)
 {
 	int n,i;
 
@@ -276,6 +276,13 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 		return hex_to_bin(slot_id+3, id, id_len);
 	}
 
+	/* label_<label>  */
+	if ( strncmp(slot_id, "label_",6) == 0)
+	{
+		*label = strdup(slot_id+6);
+		return *label != NULL;
+	}
+
 	/* last try: it has to be slot_<slot> and then "-id_<cert>" */
 
 	if (strncmp(slot_id, "slot_", 5) != 0) {
@@ -319,6 +326,10 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 		return hex_to_bin(slot_id+i+3, id, id_len);
 	}
 
+	/* ... or "label_" */
+	if ( strncmp(slot_id+i, "label_",6) == 0) 
+		return (*label = strdup(slot_id+6)) != NULL;
+
 	fprintf(stderr,"could not parse string!\n");
 	return 0;
 }
@@ -337,23 +348,29 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	unsigned int count, n, m;
 	unsigned char cert_id[MAX_VALUE_LEN / 2];
 	size_t cert_id_len = sizeof(cert_id);
+	char *cert_label = NULL;
 	int slot_nr = -1;
 	char flags[64];
 
 	if (s_slot_cert_id && *s_slot_cert_id) {
 		n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
-				cert_id, &cert_id_len);
+				cert_id, &cert_id_len, &cert_label);
 		if (!n) {
-			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
+			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
 			fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
 			fprintf(stderr,"and <id> is the id number as hex string.\n");
+			fprintf(stderr,"and <label> is the textual key label string.\n");  
 			return NULL;
 		}
 		if(verbose) {
 			fprintf(stderr,"Looking in slot %d for certificate: ", slot_nr);
-			for (n=0; n < cert_id_len; n++)
-				fprintf(stderr,"%02x",cert_id[n]);
-			fprintf(stderr,"\n");
+			if(cert_label == NULL) {
+				for (n=0; n < cert_id_len; n++)
+					fprintf(stderr,"%02x",cert_id[n]);
+				fprintf(stderr,"\n");
+			} else
+				fprintf(stderr, "label: %s\n", cert_label);
+
 		}
 	}
 
@@ -445,7 +462,8 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	}
 
 	x509 = X509_dup(selected_cert->x509);
-
+	if (cert_label != NULL)
+		free(cert_label);
 	return x509;
 }
 
@@ -478,23 +496,28 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	unsigned int count, n, m;
 	unsigned char key_id[MAX_VALUE_LEN / 2];
 	size_t key_id_len = sizeof(key_id);
+	char *key_label = NULL;
 	int slot_nr = -1;
 	char flags[64];
 
 	if (s_slot_key_id && *s_slot_key_id) {
 		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
-			key_id, &key_id_len);
+			key_id, &key_id_len, &key_label);
 		if (!n) {
-			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>\n");
+			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
 			fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
 			fprintf(stderr,"and <id> is the id number as hex string.\n");
+			fprintf(stderr,"and <label> is the textual key label string.\n");  
 			return NULL;
 		}
 		if(verbose) {
 			fprintf(stderr,"Looking in slot %d for key: ", slot_nr);
+			if (key_label == NULL) {
 			for (n=0; n < key_id_len; n++)
 				fprintf(stderr,"%02x",key_id[n]);
 			fprintf(stderr,"\n");
+			} else
+				fprintf(stderr, "label: %s\n", key_label);
 		}
 	}
 
@@ -635,6 +658,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
                 /* TODO when does PIN get freed after successful login? */
                 /* TODO confirm that multiple login attempts do not introduce
                         significant performance penalties */
+		
         }
         
         /* Make sure there is at least one private key on the token */
@@ -656,9 +680,15 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 				fprintf(stderr,"  %2u %c%c %s\n", n + 1,
 				       k->isPrivate ? 'P' : ' ', k->needLogin ? 'L' : ' ', k->label);
 			}
-			if (key_id_len != 0 && k->id_len == key_id_len &&
-			    memcmp(k->id, key_id, key_id_len) == 0) {
-				selected_key = k;
+			if (key_label == NULL) {
+				if (key_id_len != 0 && k->id_len == key_id_len &&
+				memcmp(k->id, key_id, key_id_len) == 0) {
+					selected_key = k;
+				}
+			} else {
+				if (strcmp(k->label, key_label) == 0) {
+					selected_key = k;
+				}
 			}
 		}
 	} else {
@@ -677,7 +707,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		   need a get_public_key? */
 		pk = PKCS11_get_private_key(selected_key);
 	}
-
+	if (key_label != NULL)
+		free(key_label);
 	return pk;
 }
 
