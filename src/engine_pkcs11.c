@@ -99,6 +99,15 @@ int inc_verbose(void)
 static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin, int maxlen)
 {
 	UI *ui;
+	struct {
+		const void *password;
+		const char *prompt_info;
+	} *mycb = callback_data;
+
+	if (mycb->password) {
+		sc_pin = set_pin(mycb->password);
+		return sc_pin;
+	}
 
 	ui = UI_new();
 	if (ui_method != NULL)
