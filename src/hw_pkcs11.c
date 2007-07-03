@@ -82,7 +82,8 @@
 #define CMD_LOAD_CERT_CTRL	(ENGINE_CMD_BASE+5)
 
 static int pkcs11_engine_destroy(ENGINE * e);
-static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p, void (*f) ());
+static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
+			      void (*f) ());
 
 /* The definitions for control commands specific to this engine */
 
@@ -122,14 +123,15 @@ static int pkcs11_engine_destroy(ENGINE * e)
 	return 1;
 }
 
-static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p, void (*f) ())
+static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
+			      void (*f) ())
 {
 	/*int initialised = ((pkcs11_dso == NULL) ? 0 : 1); */
 	switch (cmd) {
 	case CMD_MODULE_PATH:
-		return set_module((const char *) p);
+		return set_module((const char *)p);
 	case CMD_PIN:
-		return set_pin((const char *) p);
+		return set_pin((const char *)p);
 	case CMD_VERBOSE:
 		return inc_verbose();
 	case CMD_LOAD_CERT_CTRL:

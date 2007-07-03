@@ -49,7 +49,7 @@ static PKCS11_CTX *ctx;
  * get_pin function (using an external UI). The memory for this PIN is always
  * owned internally, and may be freed as necessary. Before freeing, the PIN 
  * must be whitened, to prevent security holes.
- */ 
+ */
 static char *pin = NULL;
 
 static int verbose = 0;
@@ -58,7 +58,7 @@ static char *module = NULL;
 
 int set_module(const char *modulename)
 {
-	module = strdup (modulename);
+	module = strdup(modulename);
 	return 1;
 }
 
@@ -77,14 +77,14 @@ int set_module(const char *modulename)
  */
 int set_pin(const char *_pin)
 {
-        /* Pre-condition check */
-        if (_pin == NULL) {
-              errno = EINVAL;
-              return 0;
-        }
-     
-        /* Copy the PIN. If the string cannot be copied, NULL
-           shall be returned and errno shall be set. */
+	/* Pre-condition check */
+	if (_pin == NULL) {
+		errno = EINVAL;
+		return 0;
+	}
+
+	/* Copy the PIN. If the string cannot be copied, NULL
+	   shall be returned and errno shall be set. */
 	pin = strdup(_pin);
 
 	return (pin != NULL);
@@ -96,7 +96,8 @@ int inc_verbose(void)
 	return 1;
 }
 
-static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin, int maxlen)
+static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin,
+		     int maxlen)
 {
 	UI *ui;
 	struct {
@@ -115,7 +116,8 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin, i
 	if (callback_data != NULL)
 		UI_set_app_data(ui, callback_data);
 
-	if (!UI_add_input_string(ui, "PKCS#11 token PIN: ", 0, sc_pin, 1, maxlen)) {
+	if (!UI_add_input_string
+	    (ui, "PKCS#11 token PIN: ", 0, sc_pin, 1, maxlen)) {
 		fprintf(stderr, "UI_add_input_string failed\n");
 		UI_free(ui);
 		return NULL;
@@ -196,7 +198,9 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 			else if ('A' <= c && c <= 'F')
 				c = c - 'A' + 10;
 			else {
-				fprintf(stderr,"hex_to_bin(): invalid char '%c' in hex string\n", c);
+				fprintf(stderr,
+					"hex_to_bin(): invalid char '%c' in hex string\n",
+					c);
 				*outlen = 0;
 				return 0;
 			}
@@ -205,11 +209,11 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 		if (*in == ':')
 			in++;
 		if (left <= 0) {
-			fprintf(stderr,"hex_to_bin(): hex string too long\n");
+			fprintf(stderr, "hex_to_bin(): hex string too long\n");
 			*outlen = 0;
 			return 0;
 		}
-		out[count++] = (unsigned char) byte;
+		out[count++] = (unsigned char)byte;
 		left--;
 	}
 
@@ -219,36 +223,36 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 
 /* parse string containing slot and id information */
 
-static int parse_slot_id_string(const char *slot_id, int *slot, 
-		unsigned char *id, size_t *id_len, char ** label)
+static int parse_slot_id_string(const char *slot_id, int *slot,
+				unsigned char *id, size_t * id_len,
+				char **label)
 {
-	int n,i;
+	int n, i;
 
-	if (! slot_id)
+	if (!slot_id)
 		return 0;
 
 	/* support for several formats */
 #define HEXDIGITS "01234567890ABCDEFabcdef"
 #define DIGITS "0123456789"
 
-
 	/* first: pure hex number (id, slot is 0) */
-	if (strspn(slot_id,HEXDIGITS) == strlen(slot_id)) {
+	if (strspn(slot_id, HEXDIGITS) == strlen(slot_id)) {
 		/* ah, easiest case: only hex. */
-		if ((strlen(slot_id)+1) /2 > *id_len) {
-			fprintf(stderr,"id string too long!\n");
-			return 0; 
+		if ((strlen(slot_id) + 1) / 2 > *id_len) {
+			fprintf(stderr, "id string too long!\n");
+			return 0;
 		}
 		*slot = 0;
 		return hex_to_bin(slot_id, id, id_len);
 	}
 
 	/* second: slot:id. slot is an digital int. */
-	if (sscanf(slot_id,"%d",&n) == 1) {
-		i = strspn(slot_id,DIGITS);
-		
+	if (sscanf(slot_id, "%d", &n) == 1) {
+		i = strspn(slot_id, DIGITS);
+
 		if (slot_id[i] != ':') {
-			fprintf(stderr,"could not parse string!\n");
+			fprintf(stderr, "could not parse string!\n");
 			return 0;
 		}
 		i++;
@@ -257,38 +261,37 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 			*id_len = 0;
 			return 1;
 		}
-		if (strspn(slot_id+i,HEXDIGITS)+i != strlen(slot_id)) {
-			fprintf(stderr,"could not parse string!\n");
+		if (strspn(slot_id + i, HEXDIGITS) + i != strlen(slot_id)) {
+			fprintf(stderr, "could not parse string!\n");
 			return 0;
 		}
 		/* ah, rest is hex */
-		if ((strlen(slot_id)-i+1) /2 > *id_len) {
-			fprintf(stderr,"id string too long!\n");
-			return 0; 
+		if ((strlen(slot_id) - i + 1) / 2 > *id_len) {
+			fprintf(stderr, "id string too long!\n");
+			return 0;
 		}
 		*slot = n;
-		return hex_to_bin(slot_id+i, id, id_len);
+		return hex_to_bin(slot_id + i, id, id_len);
 	}
 
 	/* third: id_<id>  */
-	if ( strncmp(slot_id, "id_",3) == 0) {
-		if (strspn(slot_id+3,HEXDIGITS)+3 != strlen(slot_id)) {
-			fprintf(stderr,"could not parse string!\n");
+	if (strncmp(slot_id, "id_", 3) == 0) {
+		if (strspn(slot_id + 3, HEXDIGITS) + 3 != strlen(slot_id)) {
+			fprintf(stderr, "could not parse string!\n");
 			return 0;
 		}
 		/* ah, rest is hex */
-		if ((strlen(slot_id)-3+1)/2 > *id_len) {
-			fprintf(stderr,"id string too long!\n");
-			return 0; 
+		if ((strlen(slot_id) - 3 + 1) / 2 > *id_len) {
+			fprintf(stderr, "id string too long!\n");
+			return 0;
 		}
 		*slot = 0;
-		return hex_to_bin(slot_id+3, id, id_len);
+		return hex_to_bin(slot_id + 3, id, id_len);
 	}
 
 	/* label_<label>  */
-	if ( strncmp(slot_id, "label_",6) == 0)
-	{
-		*label = strdup(slot_id+6);
+	if (strncmp(slot_id, "label_", 6) == 0) {
+		*label = strdup(slot_id + 6);
 		return *label != NULL;
 	}
 
@@ -300,46 +303,47 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	}
 
 	/* slot is an digital int. */
-	if (sscanf(slot_id+5,"%d",&n) != 1) {
+	if (sscanf(slot_id + 5, "%d", &n) != 1) {
 		fprintf(stderr, "slot number not deciphered!\n");
 		return 0;
-	} 
+	}
 
-	i = strspn(slot_id+5,DIGITS);
+	i = strspn(slot_id + 5, DIGITS);
 
-	if (slot_id[i+5] == 0) {
+	if (slot_id[i + 5] == 0) {
 		*slot = n;
 		*id_len = 0;
 		return 1;
 	}
-		
-	if (slot_id[i+5] != '-') {
-		fprintf(stderr,"could not parse string!\n");
+
+	if (slot_id[i + 5] != '-') {
+		fprintf(stderr, "could not parse string!\n");
 		return 0;
 	}
 
-	i=5+i+1;
+	i = 5 + i + 1;
 
 	/* now followed by "id_" */
-	if ( strncmp(slot_id+i, "id_",3) == 0) {
-		if (strspn(slot_id+i+3,HEXDIGITS)+3+i != strlen(slot_id)) {
-			fprintf(stderr,"could not parse string!\n");
+	if (strncmp(slot_id + i, "id_", 3) == 0) {
+		if (strspn(slot_id + i + 3, HEXDIGITS) + 3 + i !=
+		    strlen(slot_id)) {
+			fprintf(stderr, "could not parse string!\n");
 			return 0;
 		}
 		/* ah, rest is hex */
-		if ((strlen(slot_id)-i-3+1)/2 > *id_len) {
-			fprintf(stderr,"id string too long!\n");
-			return 0; 
+		if ((strlen(slot_id) - i - 3 + 1) / 2 > *id_len) {
+			fprintf(stderr, "id string too long!\n");
+			return 0;
 		}
 		*slot = n;
-		return hex_to_bin(slot_id+i+3, id, id_len);
+		return hex_to_bin(slot_id + i + 3, id, id_len);
 	}
 
 	/* ... or "label_" */
-	if ( strncmp(slot_id+i, "label_",6) == 0) 
-		return (*label = strdup(slot_id+6)) != NULL;
+	if (strncmp(slot_id + i, "label_", 6) == 0)
+		return (*label = strdup(slot_id + 6)) != NULL;
 
-	fprintf(stderr,"could not parse string!\n");
+	fprintf(stderr, "could not parse string!\n");
 	return 0;
 }
 
@@ -363,20 +367,25 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 
 	if (s_slot_cert_id && *s_slot_cert_id) {
 		n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
-				cert_id, &cert_id_len, &cert_label);
+					 cert_id, &cert_id_len, &cert_label);
 		if (!n) {
-			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
-			fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
-			fprintf(stderr,"and <id> is the id number as hex string.\n");
-			fprintf(stderr,"and <label> is the textual key label string.\n");  
+			fprintf(stderr,
+				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
+			fprintf(stderr,
+				"where <slot> is the slot number as normal integer,\n");
+			fprintf(stderr,
+				"and <id> is the id number as hex string.\n");
+			fprintf(stderr,
+				"and <label> is the textual key label string.\n");
 			return NULL;
 		}
-		if(verbose) {
-			fprintf(stderr,"Looking in slot %d for certificate: ", slot_nr);
-			if(cert_label == NULL) {
-				for (n=0; n < cert_id_len; n++)
-					fprintf(stderr,"%02x",cert_id[n]);
-				fprintf(stderr,"\n");
+		if (verbose) {
+			fprintf(stderr, "Looking in slot %d for certificate: ",
+				slot_nr);
+			if (cert_label == NULL) {
+				for (n = 0; n < cert_id_len; n++)
+					fprintf(stderr, "%02x", cert_id[n]);
+				fprintf(stderr, "\n");
 			} else
 				fprintf(stderr, "label: %s\n", cert_label);
 
@@ -386,8 +395,9 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
 		fail("failed to enumerate slots\n");
 
-	if(verbose) {
-		fprintf(stderr,"Found %u slot%s\n", count, (count <= 1) ? "" : "s");
+	if (verbose) {
+		fprintf(stderr, "Found %u slot%s\n", count,
+			(count <= 1) ? "" : "s");
 	}
 	for (n = 0; n < count; n++) {
 		slot = slot_list + n;
@@ -407,15 +417,16 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		if ((m = strlen(flags)) != 0) {
 			flags[m - 2] = '\0';
 		}
-		
-		if(verbose) {
-			fprintf(stderr,"[%u] %-25.25s  %-16s", n, slot->description, flags);
+
+		if (verbose) {
+			fprintf(stderr, "[%u] %-25.25s  %-16s", n,
+				slot->description, flags);
 			if (slot->token) {
-				fprintf(stderr,"  (%s)",
-				       slot->token->label[0] ?
-				       slot->token->label : "no label");
+				fprintf(stderr, "  (%s)",
+					slot->token->label[0] ?
+					slot->token->label : "no label");
 			}
-			fprintf(stderr,"\n");
+			fprintf(stderr, "\n");
 		}
 	}
 
@@ -425,47 +436,48 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	} else if (slot_nr >= 0 && slot_nr < count)
 		slot = slot_list + slot_nr;
 	else {
-		fprintf(stderr,"Invalid slot number: %d\n", slot_nr);
+		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 	tok = slot->token;
 
 	if (tok == NULL) {
-		fprintf(stderr,"Found empty token; \n");
+		fprintf(stderr, "Found empty token; \n");
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 
-	if(verbose) {
-		fprintf(stderr,"Found slot:  %s\n", slot->description);
-		fprintf(stderr,"Found token: %s\n", slot->token->label);
+	if (verbose) {
+		fprintf(stderr, "Found slot:  %s\n", slot->description);
+		fprintf(stderr, "Found token: %s\n", slot->token->label);
 	}
 
 	if (PKCS11_enumerate_certs(tok, &certs, &count)) {
-		fprintf(stderr,"unable to enumerate certificates\n");
+		fprintf(stderr, "unable to enumerate certificates\n");
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 
-	if(verbose) {
-		fprintf(stderr,"Found %u cert%s:\n", count, (count <= 1) ? "" : "s");
+	if (verbose) {
+		fprintf(stderr, "Found %u cert%s:\n", count,
+			(count <= 1) ? "" : "s");
 	}
 	if ((s_slot_cert_id && *s_slot_cert_id) || (cert_id_len == 0)) {
 		for (n = 0; n < count; n++) {
 			PKCS11_CERT *k = certs + n;
 
 			if (cert_id_len != 0 && k->id_len == cert_id_len &&
-		    		memcmp(k->id, cert_id, cert_id_len) == 0) {
+			    memcmp(k->id, cert_id, cert_id_len) == 0) {
 				selected_cert = k;
 			}
 		}
 	} else {
-		selected_cert = certs; /* use first */
+		selected_cert = certs;	/* use first */
 	}
 
 	if (selected_cert == NULL) {
-		fprintf(stderr,"certificate not found.\n");
+		fprintf(stderr, "certificate not found.\n");
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
@@ -476,13 +488,13 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	return x509;
 }
 
-int load_cert_ctrl(ENGINE *e, void *p)
+int load_cert_ctrl(ENGINE * e, void *p)
 {
 	struct {
-		const char * s_slot_cert_id;
+		const char *s_slot_cert_id;
 		X509 *cert;
 	} *parms = p;
-	
+
 	if (parms->cert != NULL)
 		return 0;
 
@@ -493,9 +505,9 @@ int load_cert_ctrl(ENGINE *e, void *p)
 	return 1;
 }
 
-
 static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
-			  UI_METHOD * ui_method, void *callback_data, int isPrivate)
+				 UI_METHOD * ui_method, void *callback_data,
+				 int isPrivate)
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_TOKEN *tok;
@@ -511,20 +523,25 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 
 	if (s_slot_key_id && *s_slot_key_id) {
 		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
-			key_id, &key_id_len, &key_label);
+					 key_id, &key_id_len, &key_label);
 		if (!n) {
-			fprintf(stderr,"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
-			fprintf(stderr,"where <slot> is the slot number as normal integer,\n");
-			fprintf(stderr,"and <id> is the id number as hex string.\n");
-			fprintf(stderr,"and <label> is the textual key label string.\n");  
+			fprintf(stderr,
+				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
+			fprintf(stderr,
+				"where <slot> is the slot number as normal integer,\n");
+			fprintf(stderr,
+				"and <id> is the id number as hex string.\n");
+			fprintf(stderr,
+				"and <label> is the textual key label string.\n");
 			return NULL;
 		}
-		if(verbose) {
-			fprintf(stderr,"Looking in slot %d for key: ", slot_nr);
+		if (verbose) {
+			fprintf(stderr, "Looking in slot %d for key: ",
+				slot_nr);
 			if (key_label == NULL) {
-			for (n=0; n < key_id_len; n++)
-				fprintf(stderr,"%02x",key_id[n]);
-			fprintf(stderr,"\n");
+				for (n = 0; n < key_id_len; n++)
+					fprintf(stderr, "%02x", key_id[n]);
+				fprintf(stderr, "\n");
 			} else
 				fprintf(stderr, "label: %s\n", key_label);
 		}
@@ -533,8 +550,9 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
 		fail("failed to enumerate slots\n");
 
-	if(verbose) {
-		fprintf(stderr,"Found %u slot%s\n", count, (count <= 1) ? "" : "s");
+	if (verbose) {
+		fprintf(stderr, "Found %u slot%s\n", count,
+			(count <= 1) ? "" : "s");
 	}
 	for (n = 0; n < count; n++) {
 		slot = slot_list + n;
@@ -554,15 +572,16 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		if ((m = strlen(flags)) != 0) {
 			flags[m - 2] = '\0';
 		}
-		
-		if(verbose) {
-			fprintf(stderr,"[%u] %-25.25s  %-16s", n, slot->description, flags);
+
+		if (verbose) {
+			fprintf(stderr, "[%u] %-25.25s  %-16s", n,
+				slot->description, flags);
 			if (slot->token) {
-				fprintf(stderr,"  (%s)",
-				       slot->token->label[0] ?
-				       slot->token->label : "no label");
+				fprintf(stderr, "  (%s)",
+					slot->token->label[0] ?
+					slot->token->label : "no label");
 			}
-			fprintf(stderr,"\n");
+			fprintf(stderr, "\n");
 		}
 	}
 
@@ -572,126 +591,129 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	} else if (slot_nr >= 0 && slot_nr < count)
 		slot = slot_list + slot_nr;
 	else {
-		fprintf(stderr,"Invalid slot number: %d\n", slot_nr);
+		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 	tok = slot->token;
 
 	if (tok == NULL) {
-		fprintf(stderr,"Found empty token; \n");
+		fprintf(stderr, "Found empty token; \n");
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 /* Removed for interop with some other pkcs11 libs. */
 #if 0
 	if (!tok->initialized) {
-		fprintf(stderr,"Found uninitialized token; \n");
+		fprintf(stderr, "Found uninitialized token; \n");
 		return NULL;
 	}
 #endif
 	if (isPrivate && !tok->userPinSet && !tok->readOnly) {
-		fprintf(stderr,"Found slot without user PIN\n");
+		fprintf(stderr, "Found slot without user PIN\n");
 		PKCS11_release_all_slots(ctx, slot_list, count);
 		return NULL;
 	}
 
-	if(verbose) {
-		fprintf(stderr,"Found slot:  %s\n", slot->description);
-		fprintf(stderr,"Found token: %s\n", slot->token->label);
+	if (verbose) {
+		fprintf(stderr, "Found slot:  %s\n", slot->description);
+		fprintf(stderr, "Found token: %s\n", slot->token->label);
 	}
 
 	if (PKCS11_enumerate_certs(tok, &certs, &count))
 		fail("unable to enumerate certificates\n");
 
-	if(verbose) {
-		fprintf(stderr,"Found %u certificate%s:\n", count, (count <= 1) ? "" : "s");
+	if (verbose) {
+		fprintf(stderr, "Found %u certificate%s:\n", count,
+			(count <= 1) ? "" : "s");
 		for (n = 0; n < count; n++) {
 			PKCS11_CERT *c = certs + n;
 			char *dn = NULL;
 
-			fprintf(stderr,"  %2u    %s", n + 1, c->label);
+			fprintf(stderr, "  %2u    %s", n + 1, c->label);
 			if (c->x509)
-				dn = X509_NAME_oneline(X509_get_subject_name(c->x509), NULL, 0);
+				dn = X509_NAME_oneline(X509_get_subject_name
+						       (c->x509), NULL, 0);
 			if (dn) {
-				fprintf(stderr," (%s)", dn);
+				fprintf(stderr, " (%s)", dn);
 				OPENSSL_free(dn);
 			}
-			fprintf(stderr,"\n");
+			fprintf(stderr, "\n");
 		}
 	}
 
-        /* Perform login to the token if required */
-        if (tok->loginRequired) {
-                /* If the token has a secure login (i.e., an external keypad),
-                   then use a NULL pin. Otherwise, check if a PIN exists. If
-                   not, allocate and obtain a new PIN. */
-                if (tok->secureLogin) {
-                        /* Free the PIN if it has already been 
-                           assigned (i.e, via set_pin */
+	/* Perform login to the token if required */
+	if (tok->loginRequired) {
+		/* If the token has a secure login (i.e., an external keypad),
+		   then use a NULL pin. Otherwise, check if a PIN exists. If
+		   not, allocate and obtain a new PIN. */
+		if (tok->secureLogin) {
+			/* Free the PIN if it has already been 
+			   assigned (i.e, via set_pin */
 			if (pin != NULL) {
 				OPENSSL_cleanse(pin, strlen(pin));
-				free (pin);
+				free(pin);
 				pin = NULL;
 			}
-                }
-                else if (pin == NULL) {
-                        pin = (char *) calloc(MAX_PIN_LENGTH, sizeof(char));
-                        if (pin == NULL) {
-                                fail("Could not allocate memory for PIN");
-                        }        
-                        get_pin(ui_method, callback_data, pin, MAX_PIN_LENGTH);
-                }
-                
-                /* Now login in with the (possibly NULL) pin */
-                if (PKCS11_login(slot, 0, pin)) {
-                        /* Login failed, so free the PIN if present */
-                        if(pin != NULL) {
+		} else if (pin == NULL) {
+			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+			if (pin == NULL) {
+				fail("Could not allocate memory for PIN");
+			}
+			get_pin(ui_method, callback_data, pin, MAX_PIN_LENGTH);
+		}
+
+		/* Now login in with the (possibly NULL) pin */
+		if (PKCS11_login(slot, 0, pin)) {
+			/* Login failed, so free the PIN if present */
+			if (pin != NULL) {
 				OPENSSL_cleanse(pin, sizeof(pin));
-                                free(pin);
-                                pin = NULL;
-                        }
-                        fail("Login failed\n");
-                }
-                /* Login successful, PIN retained in case further logins are 
-                   required. This will occur on subsequent calls to the
-                   pkcs11_load_key function. Subsequent login calls should be
-                   relatively fast (the token should maintain its own login
-                   state), although there may still be a slight performance 
-                   penalty. We could maintain state noting that successful
-                   login has been performed, but this state may not be updated
-                   if the token is removed and reinserted between calls. It
-                   seems safer to retain the PIN and peform a login on each
-                   call to pkcs11_load_key, even if this may not be strictly
-                   necessary. */
-                /* TODO when does PIN get freed after successful login? */
-                /* TODO confirm that multiple login attempts do not introduce
-                        significant performance penalties */
-		
-        }
-        
-        /* Make sure there is at least one private key on the token */
-        if (PKCS11_enumerate_keys(tok, &keys, &count)) {
-                fail("unable to enumerate keys\n");
-        }
+				free(pin);
+				pin = NULL;
+			}
+			fail("Login failed\n");
+		}
+		/* Login successful, PIN retained in case further logins are 
+		   required. This will occur on subsequent calls to the
+		   pkcs11_load_key function. Subsequent login calls should be
+		   relatively fast (the token should maintain its own login
+		   state), although there may still be a slight performance 
+		   penalty. We could maintain state noting that successful
+		   login has been performed, but this state may not be updated
+		   if the token is removed and reinserted between calls. It
+		   seems safer to retain the PIN and peform a login on each
+		   call to pkcs11_load_key, even if this may not be strictly
+		   necessary. */
+		/* TODO when does PIN get freed after successful login? */
+		/* TODO confirm that multiple login attempts do not introduce
+		   significant performance penalties */
+
+	}
+
+	/* Make sure there is at least one private key on the token */
+	if (PKCS11_enumerate_keys(tok, &keys, &count)) {
+		fail("unable to enumerate keys\n");
+	}
 	if (count == 0) {
 		fail("No keys found.\n");
 	}
 
-	if(verbose) {
-		fprintf(stderr,"Found %u key%s:\n", count, (count <= 1) ? "" : "s");
+	if (verbose) {
+		fprintf(stderr, "Found %u key%s:\n", count,
+			(count <= 1) ? "" : "s");
 	}
 	if (s_slot_key_id && *s_slot_key_id) {
 		for (n = 0; n < count; n++) {
 			PKCS11_KEY *k = keys + n;
 
-			if(verbose) {
-				fprintf(stderr,"  %2u %c%c %s\n", n + 1,
-				       k->isPrivate ? 'P' : ' ', k->needLogin ? 'L' : ' ', k->label);
+			if (verbose) {
+				fprintf(stderr, "  %2u %c%c %s\n", n + 1,
+					k->isPrivate ? 'P' : ' ',
+					k->needLogin ? 'L' : ' ', k->label);
 			}
 			if (key_label == NULL) {
-				if (key_id_len != 0 && k->id_len == key_id_len &&
-				memcmp(k->id, key_id, key_id_len) == 0) {
+				if (key_id_len != 0 && k->id_len == key_id_len
+				    && memcmp(k->id, key_id, key_id_len) == 0) {
 					selected_key = k;
 				}
 			} else {
@@ -701,11 +723,11 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			}
 		}
 	} else {
-		selected_key = keys; /* use first */
+		selected_key = keys;	/* use first */
 	}
 
 	if (selected_key == NULL) {
-		fprintf(stderr,"key not found.\n");
+		fprintf(stderr, "key not found.\n");
 		return NULL;
 	}
 
