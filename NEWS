@@ -1,0 +1,9 @@
+NEWS for Engine PKCS#11 -- History of user visible changes
+
+New in 0.1.4; 2007-07-03 Andreas Jellinghaus
+* new urls
+* disabled some dead code
+* new max length for pin: 32 bytes
+* make internal variables and code static
+* parse slot as hex too
+* support selecting slot by label

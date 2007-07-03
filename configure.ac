@@ -4,7 +4,7 @@ dnl Process this file with autoconf to produce a configure script.
 # Require autoconf 2.52
 AC_PREREQ(2.52)
 
-AC_INIT(engine_pkcs11, [0.1.3-svn])
+AC_INIT(engine_pkcs11, [0.1.4])
 
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
