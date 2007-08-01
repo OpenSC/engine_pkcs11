@@ -45,10 +45,12 @@
 static PKCS11_CTX *ctx;
 
 /** 
- * The PIN used for login. May be assigend by set_pin function, or by the
- * get_pin function (using an external UI). The memory for this PIN is always
- * owned internally, and may be freed as necessary. Before freeing, the PIN 
+ * The PIN used for login. Cache for the get_pin function.
+ * The memory for this PIN is always owned internally,
+ * and may be freed as necessary. Before freeing, the PIN 
  * must be whitened, to prevent security holes.
+ *
+ * length is always MAX_PIN_LENGTH and possibly not 0 terminated?
  */
 static char *pin = NULL;
 
@@ -62,42 +64,16 @@ int set_module(const char *modulename)
 	return 1;
 }
 
-/**
- * Set the PIN used for login. A copy of the PIN shall be made.
- *
- * If the PIN cannot be assigned, the value 0 shall be returned
- * and errno shall be set as follows:
- *
- *   EINVAL - a NULL PIN was supplied
- *   ENOMEM - insufficient memory to copy the PIN
- *
- * @param _pin the pin to use for login. Must not be NULL.
- *
- * @return 1 on success, 0 on failure.
- */
-int set_pin(const char *_pin)
-{
-	/* Pre-condition check */
-	if (_pin == NULL) {
-		errno = EINVAL;
-		return 0;
-	}
-
-	/* Copy the PIN. If the string cannot be copied, NULL
-	   shall be returned and errno shall be set. */
-	pin = strdup(_pin);
-
-	return (pin != NULL);
-}
-
 int inc_verbose(void)
 {
 	verbose++;
 	return 1;
 }
 
-static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin,
-		     int maxlen)
+/* either get the pin code from the supplied callback data, or get the pin
+ * via asking our self. In both cases keep a copy of the pin code in the
+ * pin variable (strdup'ed copy). */
+static char *get_pin(UI_METHOD * ui_method, void *callback_data);
 {
 	UI *ui;
 	struct {
@@ -105,11 +81,16 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin,
 		const char *prompt_info;
 	} *mycb = callback_data;
 
+	/* pin in the call back data, copy and use */
 	if (mycb->password) {
-		sc_pin = set_pin(mycb->password);
-		return sc_pin;
+		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+		if (!pin)
+			return NULL;
+		strncpy(pin,mycb->password,MAX_PIN_LENGTH);
+		return 1;
 	}
 
+	/* call ui to ask for a pin */
 	ui = UI_new();
 	if (ui_method != NULL)
 		UI_set_method(ui, ui_method);
@@ -117,7 +98,7 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin,
 		UI_set_app_data(ui, callback_data);
 
 	if (!UI_add_input_string
-	    (ui, "PKCS#11 token PIN: ", 0, sc_pin, 1, maxlen)) {
+	    (ui, "PKCS#11 token PIN: ", 0, pin, 1, MAX_PIN_LENGTH)) {
 		fprintf(stderr, "UI_add_input_string failed\n");
 		UI_free(ui);
 		return NULL;
@@ -128,7 +109,7 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data, char *sc_pin,
 		return NULL;
 	}
 	UI_free(ui);
-	return sc_pin;
+	return 1;
 }
 
 int pkcs11_finish(ENGINE * engine)
@@ -139,7 +120,7 @@ int pkcs11_finish(ENGINE * engine)
 		ctx = NULL;
 	}
 	if (pin != NULL) {
-		OPENSSL_cleanse(pin, sizeof(pin));
+		OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
 		free(pin);
 		pin = NULL;
 	}
@@ -162,6 +143,7 @@ int pkcs11_init(ENGINE * engine)
 int pkcs11_rsa_finish(RSA * rsa)
 {
 	if (pin) {
+		OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
 		free(pin);
 		pin = NULL;
 	}
@@ -649,9 +631,9 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		   not, allocate and obtain a new PIN. */
 		if (tok->secureLogin) {
 			/* Free the PIN if it has already been 
-			   assigned (i.e, via set_pin */
+			   assigned (i.e, cached by get_pin) */
 			if (pin != NULL) {
-				OPENSSL_cleanse(pin, strlen(pin));
+				OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
 				free(pin);
 				pin = NULL;
 			}
@@ -660,14 +642,19 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			if (pin == NULL) {
 				fail("Could not allocate memory for PIN");
 			}
-			get_pin(ui_method, callback_data, pin, MAX_PIN_LENGTH);
+			if (!get_pin(ui_method, callback_data) ) {
+				OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
+				free(pin);
+				pin = NULL;
+				fail("No pin code was entered");
+			}
 		}
 
 		/* Now login in with the (possibly NULL) pin */
 		if (PKCS11_login(slot, 0, pin)) {
 			/* Login failed, so free the PIN if present */
 			if (pin != NULL) {
-				OPENSSL_cleanse(pin, sizeof(pin));
+				OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
 				free(pin);
 				pin = NULL;
 			}
