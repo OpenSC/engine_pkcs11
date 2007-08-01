@@ -73,7 +73,7 @@ int inc_verbose(void)
 /* either get the pin code from the supplied callback data, or get the pin
  * via asking our self. In both cases keep a copy of the pin code in the
  * pin variable (strdup'ed copy). */
-static char *get_pin(UI_METHOD * ui_method, void *callback_data);
+static int get_pin(UI_METHOD * ui_method, void *callback_data)
 {
 	UI *ui;
 	struct {
@@ -85,7 +85,7 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data);
 	if (mycb->password) {
 		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
 		if (!pin)
-			return NULL;
+			return 0;
 		strncpy(pin,mycb->password,MAX_PIN_LENGTH);
 		return 1;
 	}
@@ -101,12 +101,12 @@ static char *get_pin(UI_METHOD * ui_method, void *callback_data);
 	    (ui, "PKCS#11 token PIN: ", 0, pin, 1, MAX_PIN_LENGTH)) {
 		fprintf(stderr, "UI_add_input_string failed\n");
 		UI_free(ui);
-		return NULL;
+		return 0;
 	}
 	if (UI_process(ui)) {
 		fprintf(stderr, "UI_process failed\n");
 		UI_free(ui);
-		return NULL;
+		return 0;
 	}
 	UI_free(ui);
 	return 1;
