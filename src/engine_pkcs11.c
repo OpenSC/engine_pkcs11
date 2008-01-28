@@ -292,10 +292,19 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 
 	i = strspn(slot_id + 5, DIGITS);
 
-	if (slot_id[i + 5] == 0) {
+        /*
+         * changed 2008-01-28 9:31 GMT by SafeNet UK Ltd, akroehnert@safenet-inc.com
+         * changed comparision from == to >= as we need to check for any slot equal
+         * or greater zero
+         */
+	if (slot_id[i + 5] >= 0) {
 		*slot = n;
 		*id_len = 0;
-		return 1;
+	/*
+	 * changed 2008-01-28 9:31 GMT by SafeNet UK Ltd, akroehnert@safenet-inc.com
+      * if we jump out here we cant get the label or id parsed
+	 */
+	/*	return 1; */
 	}
 
 	if (slot_id[i + 5] != '-') {
@@ -323,7 +332,11 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 
 	/* ... or "label_" */
 	if (strncmp(slot_id + i, "label_", 6) == 0)
-		return (*label = strdup(slot_id + 6)) != NULL;
+		/*
+	         * changed 2008-01-28 9:31 CET by SafeNet UK Ltd, akroehnert@safenet-inc.com
+        	 * we have to chop off + i + 6 characters instead of just 6
+		 */
+		return (*label = strdup(slot_id + i + 6)) != NULL;
 
 	fprintf(stderr, "could not parse string!\n");
 	return 0;
@@ -506,6 +519,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	if (s_slot_key_id && *s_slot_key_id) {
 		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
 					 key_id, &key_id_len, &key_label);
+
 		if (!n) {
 			fprintf(stderr,
 				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
