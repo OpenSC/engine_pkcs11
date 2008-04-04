@@ -25,6 +25,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <config.h>
 #include <stdio.h>
 #include <string.h>
 #include <openssl/crypto.h>
@@ -62,6 +63,34 @@ int set_module(const char *modulename)
 {
 	module = strdup(modulename);
 	return 1;
+}
+
+/**
+ * Set the PIN used for login. A copy of the PIN shall be made.
+ *
+ * If the PIN cannot be assigned, the value 0 shall be returned
+ * and errno shall be set as follows:
+ *
+ *   EINVAL - a NULL PIN was supplied
+ *   ENOMEM - insufficient memory to copy the PIN
+ *
+ * @param _pin the pin to use for login. Must not be NULL.
+ *
+ * @return 1 on success, 0 on failure.
+ */
+int set_pin(const char *_pin)
+{
+	/* Pre-condition check */
+	if (_pin == NULL) {
+		errno = EINVAL;
+		return 0;
+	}
+
+	/* Copy the PIN. If the string cannot be copied, NULL
+	   shall be returned and errno shall be set. */
+	pin = strdup(_pin);
+
+	return (pin != NULL);
 }
 
 int inc_verbose(void)
