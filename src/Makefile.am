@@ -1,5 +1,5 @@
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
-EXTRA_DIST = Makefile.mak engine_pkcs11.def 
+EXTRA_DIST = Makefile.mak
 
 engines_LTLIBRARIES = engine_pkcs11.la
 
@@ -12,7 +12,9 @@ engine_pkcs11_la_SOURCES = \
 	hw_pkcs11.c engine_pkcs11.c engine_pkcs11.h  \
 	engine_pkcs11.exports
 if WIN32
-nodist_engine_pkcs11_la_SOURCES = versioninfo.rc
+engine_pkcs11_la_SOURCES += versioninfo.rc
+else
+dist_noinst_DATA = versioninfo.rc
 endif
 engine_pkcs11_la_CFLAGS = $(AM_CFLAGS) $(OPENSSL_EXTRA_CFLAGS) $(OPENSSL_CFLAGS) \
 	$(LIBP11_CFLAGS)
