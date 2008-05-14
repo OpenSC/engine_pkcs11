@@ -78,14 +78,14 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[doc],
-	[AC_HELP_STRING([--enable-doc], [enable installation of documents. @<:@disabled@:>@])],
+	[AC_HELP_STRING([--enable-doc], [enable installation of documents @<:@disabled@:>@])],
 	,
 	[enable_doc="no"]
 )
 
 AC_ARG_WITH(
 	[enginesdir],
-	[AC_HELP_STRING([--with-enginesdir], [OpenSSL engines directory. @<:@/usr/lib/engines@:>@])],
+	[AC_HELP_STRING([--with-enginesdir], [OpenSSL engines directory @<:@LIBDIR/engines@:>@])],
 	[enginesdir="${withval}"],
 	[enginesdir="\$(libdir)/engines"]
 )
