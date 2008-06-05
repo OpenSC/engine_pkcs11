@@ -1,13 +1,14 @@
 
-AC_PREREQ([2.60])
+AC_PREREQ(2.60)
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
 define([PACKAGE_VERSION_FIX], [4])
 
-AC_INIT([engine_pkcs11], [PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX-svn])
+AC_INIT([engine_pkcs11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX-svn])
 AC_CONFIG_AUX_DIR([.])
 AM_CONFIG_HEADER([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([${PACKAGE_NAME}], [${PACKAGE_VERSION}])
 
 ENGINE_PKCS11_VERSION_MAJOR="PACKAGE_VERSION_MAJOR"
@@ -31,7 +32,7 @@ AC_MSG_RESULT([${svn_checkout}])
 
 AC_ARG_WITH(
 	[cygwin-native],
-	[AC_HELP_STRING([--with-cygwin-native], [compile native win32])],
+	[AS_HELP_STRING([--with-cygwin-native],[compile native win32])],
 	,
 	[with_cygwin_native="no"]
 )
@@ -64,28 +65,28 @@ esac
 
 AC_ARG_ENABLE(
 	[strict],
-	[AC_HELP_STRING([--enable-strict], [enable strict compile mode @<:@disabled@:>@])],
+	[AS_HELP_STRING([--enable-strict],[enable strict compile mode @<:@disabled@:>@])],
 	,
 	[enable_strict="no"]
 )
 
 AC_ARG_ENABLE(
 	[pedantic],
-	[AC_HELP_STRING([--enable-pedantic], [enable pedantic compile mode @<:@disabled@:>@])],
+	[AS_HELP_STRING([--enable-pedantic],[enable pedantic compile mode @<:@disabled@:>@])],
 	,
 	[enable_pedantic="no"]
 )
 
 AC_ARG_ENABLE(
 	[doc],
-	[AC_HELP_STRING([--enable-doc], [enable installation of documents @<:@disabled@:>@])],
+	[AS_HELP_STRING([--enable-doc],[enable installation of documents @<:@disabled@:>@])],
 	,
 	[enable_doc="no"]
 )
 
 AC_ARG_WITH(
 	[enginesdir],
-	[AC_HELP_STRING([--with-enginesdir], [OpenSSL engines directory @<:@LIBDIR/engines@:>@])],
+	[AS_HELP_STRING([--with-enginesdir],[OpenSSL engines directory @<:@LIBDIR/engines@:>@])],
 	[enginesdir="${withval}"],
 	[enginesdir="\$(libdir)/engines"]
 )
@@ -102,6 +103,8 @@ dnl Add libtool support.
 AC_LIBTOOL_WIN32_DLL
 AC_LIBTOOL_RC
 AC_PROG_LIBTOOL
+#LT_INIT([win32-dll])
+#LT_LANG([Windows Resource])
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -291,13 +294,14 @@ if test "${enable_strict}" = "yes"; then
 	CFLAGS="${CFLAGS} -Wall -Wextra"
 fi
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 	Makefile
 	doc/Makefile
 	doc/nonpersistent/Makefile
 	src/Makefile
 	src/versioninfo.rc
 ])
+AC_OUTPUT
 
 cat <<EOF
 
