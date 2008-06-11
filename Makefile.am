@@ -1,6 +1,6 @@
 
 AUTOMAKE_OPTIONS = foreign 1.10
-#ACLOCAL_AMFLAGS = -I m4
+ACLOCAL_AMFLAGS = -I m4
 
 MAINTAINERCLEANFILES = \
 	config.log config.status \
@@ -22,4 +22,5 @@ dist_doc_DATA = NEWS
 
 # Allow detection of packaged tarball
 dist-hook:
+	$(MKDIR_P) "$(distdir)/m4"
 	echo > "$(distdir)/packaged"
