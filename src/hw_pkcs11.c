@@ -81,6 +81,7 @@
 #define CMD_VERBOSE		(ENGINE_CMD_BASE+3)
 #define CMD_QUIET		(ENGINE_CMD_BASE+4)
 #define CMD_LOAD_CERT_CTRL	(ENGINE_CMD_BASE+5)
+#define CMD_INIT_ARGS	(ENGINE_CMD_BASE+6)
 
 static int pkcs11_engine_destroy(ENGINE * e);
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
@@ -115,6 +116,10 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 	 "LOAD_CERT_CTRL",
 	 "Get the certificate from card",
 	 ENGINE_CMD_FLAG_INTERNAL},
+	{CMD_INIT_ARGS,
+	 "INIT_ARGS",
+	 "Specifies additional initialization arguments to the pkcs11 module",
+	 ENGINE_CMD_FLAG_STRING},
 	{0, NULL, NULL, 0}
 };
 
@@ -137,6 +142,8 @@ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 		return inc_verbose();
 	case CMD_LOAD_CERT_CTRL:
 		return load_cert_ctrl(e, p);
+	case CMD_INIT_ARGS:
+		return set_init_args((const char *)p);
 	default:
 		break;
 	}

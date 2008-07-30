@@ -59,6 +59,8 @@ static int verbose = 0;
 
 static char *module = NULL;
 
+static char *init_args = NULL;
+
 int set_module(const char *modulename)
 {
 	module = strdup(modulename);
@@ -141,6 +143,12 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 	return 1;
 }
 
+int set_init_args(const char *init_args_orig)
+{
+	init_args = strdup(init_args_orig);
+	return 1;
+}
+
 int pkcs11_finish(ENGINE * engine)
 {
 	if (ctx) {
@@ -162,6 +170,7 @@ int pkcs11_init(ENGINE * engine)
 		fprintf(stderr, "initializing engine\n");
 	}
 	ctx = PKCS11_CTX_new();
+        PKCS11_CTX_init_args(ctx, init_args);
 	if (PKCS11_CTX_load(ctx, module) < 0) {
 		fprintf(stderr, "unable to load module %s\n", module);
 		return 0;
