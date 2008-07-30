@@ -2,6 +2,7 @@ NEWS for Engine PKCS#11 -- History of user visible changes
 
 New in 0.1.?; 2007-??-??; Name
 * cleanup pin code, always use MAX_PIN_LENGTH, proper cleanup.
+* new use PKCS11_CTX_init_args (David Smith)
 
 New in 0.1.4; 2007-07-11; Andreas Jellinghaus
 * update wiki export script.
