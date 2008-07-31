@@ -1,11 +1,12 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
-New in 0.1.?; 2007-??-??; Name
+New in 0.1.5; 2008-07-31; Andreas Jellinghaus
 * Build system rewritten (NOTICE: configure options was modified). 
   The build system can produce outputs for *NIX, cygwin and native
   windows (using mingw).
 * cleanup pin code, always use MAX_PIN_LENGTH, proper cleanup.
 * new use PKCS11_CTX_init_args (David Smith)
+* needs new version of libp11 (0.2.4 or later).
 
 New in 0.1.4; 2007-07-11; Andreas Jellinghaus
 * update wiki export script.
