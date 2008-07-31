@@ -63,7 +63,7 @@ static char *init_args = NULL;
 
 int set_module(const char *modulename)
 {
-	module = strdup(modulename);
+	module = modulename ? strdup(modulename) : NULL;
 	return 1;
 }
 
@@ -145,7 +145,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 
 int set_init_args(const char *init_args_orig)
 {
-	init_args = strdup(init_args_orig);
+	init_args = init_args_orig ? strdup(init_args_orig) : NULL;
 	return 1;
 }
 
