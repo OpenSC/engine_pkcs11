@@ -6,6 +6,7 @@ New in 0.1.5; 2008-07-31; Andreas Jellinghaus
   windows (using mingw).
 * cleanup pin code, always use MAX_PIN_LENGTH, proper cleanup.
 * new use PKCS11_CTX_init_args (David Smith)
+* fix segfault in init_args code.
 * needs new version of libp11 (0.2.4 or later).
 
 New in 0.1.4; 2007-07-11; Andreas Jellinghaus
