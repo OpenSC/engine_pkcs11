@@ -1,5 +1,8 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
+New in 0.1.6; 2008-??-??; Andreas Jellinghaus
+* Fixed set_pin (strdup causes segfault in OPENSSL_CLEANSE later)
+
 New in 0.1.5; 2008-07-31; Andreas Jellinghaus
 * Build system rewritten (NOTICE: configure options was modified). 
   The build system can produce outputs for *NIX, cygwin and native
