@@ -90,7 +90,8 @@ int set_pin(const char *_pin)
 
 	/* Copy the PIN. If the string cannot be copied, NULL
 	   shall be returned and errno shall be set. */
-	pin = strdup(_pin);
+	pin = malloc(MAX_PIN_LENGTH);
+	strncpy(pin,_pin,MAX_PIN_LENGTH);
 
 	return (pin != NULL);
 }
