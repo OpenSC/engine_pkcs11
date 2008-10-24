@@ -114,7 +114,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 	} *mycb = callback_data;
 
 	/* pin in the call back data, copy and use */
-	if (mycb->password) {
+	if (mycb != NULL && mycb->password) {
 		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
 		if (!pin)
 			return 0;
