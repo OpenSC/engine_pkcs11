@@ -122,7 +122,7 @@ AC_CHECK_HEADERS([ \
 	locale.h getopt.h dlfcn.h utmp.h \
 ])
 
-PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.4],, [AC_MSG_ERROR([libp11 is required])])
+PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.4],, [AC_MSG_ERROR([libp11 >= 0.2.4 is required])])
 
 dnl These required for svn checkout
 AC_ARG_VAR([XSLTPROC], [xsltproc utility])
