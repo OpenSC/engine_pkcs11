@@ -392,7 +392,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	PKCS11_TOKEN *tok;
 	PKCS11_CERT *certs, *selected_cert = NULL;
 	X509 *x509;
-	unsigned int count, n, m;
+	unsigned int slot_count, cert_count, n, m;
 	unsigned char cert_id[MAX_VALUE_LEN / 2];
 	size_t cert_id_len = sizeof(cert_id);
 	char *cert_label = NULL;
@@ -426,14 +426,14 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		}
 	}
 
-	if (PKCS11_enumerate_slots(ctx, &slot_list, &count) < 0)
+	if (PKCS11_enumerate_slots(ctx, &slot_list, &slot_count) < 0)
 		fail("failed to enumerate slots\n");
 
 	if (verbose) {
-		fprintf(stderr, "Found %u slot%s\n", count,
-			(count <= 1) ? "" : "s");
+		fprintf(stderr, "Found %u slot%s\n", slot_count,
+			(slot_count <= 1) ? "" : "s");
 	}
-	for (n = 0; n < count; n++) {
+	for (n = 0; n < slot_count; n++) {
 		slot = slot_list + n;
 		flags[0] = '\0';
 		if (slot->token) {
@@ -465,20 +465,20 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	}
 
 	if (slot_nr == -1) {
-		if (!(slot = PKCS11_find_token(ctx, slot_list, count)))
+		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
-	} else if (slot_nr >= 0 && slot_nr < count)
+	} else if (slot_nr >= 0 && slot_nr < slot_count)
 		slot = slot_list + slot_nr;
 	else {
 		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
-		PKCS11_release_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
 	}
 	tok = slot->token;
 
 	if (tok == NULL) {
 		fprintf(stderr, "Found empty token; \n");
-		PKCS11_release_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
 	}
 
@@ -487,18 +487,18 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		fprintf(stderr, "Found token: %s\n", slot->token->label);
 	}
 
-	if (PKCS11_enumerate_certs(tok, &certs, &count)) {
+	if (PKCS11_enumerate_certs(tok, &certs, &cert_count)) {
 		fprintf(stderr, "unable to enumerate certificates\n");
-		PKCS11_release_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
 	}
 
 	if (verbose) {
-		fprintf(stderr, "Found %u cert%s:\n", count,
-			(count <= 1) ? "" : "s");
+		fprintf(stderr, "Found %u cert%s:\n", cert_count,
+			(cert_count <= 1) ? "" : "s");
 	}
 	if ((s_slot_cert_id && *s_slot_cert_id) || (cert_id_len == 0)) {
-		for (n = 0; n < count; n++) {
+		for (n = 0; n < cert_count; n++) {
 			PKCS11_CERT *k = certs + n;
 
 			if (cert_id_len != 0 && k->id_len == cert_id_len &&
@@ -512,7 +512,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 
 	if (selected_cert == NULL) {
 		fprintf(stderr, "certificate not found.\n");
-		PKCS11_release_all_slots(ctx, slot_list, count);
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
 	}
 
