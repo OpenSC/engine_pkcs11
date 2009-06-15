@@ -331,19 +331,10 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 
 	i = strspn(slot_id + 5, DIGITS);
 
-        /*
-         * changed 2008-01-28 9:31 GMT by SafeNet UK Ltd, akroehnert@safenet-inc.com
-         * changed comparision from == to >= as we need to check for any slot equal
-         * or greater zero
-         */
-	if (slot_id[i + 5] >= 0) {
+	if (slot_id[i + 5] == 0) {
 		*slot = n;
 		*id_len = 0;
-	/*
-	 * changed 2008-01-28 9:31 GMT by SafeNet UK Ltd, akroehnert@safenet-inc.com
-      * if we jump out here we cant get the label or id parsed
-	 */
-	/*	return 1; */
+		return 1; 
 	}
 
 	if (slot_id[i + 5] != '-') {
@@ -371,10 +362,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 
 	/* ... or "label_" */
 	if (strncmp(slot_id + i, "label_", 6) == 0)
-		/*
-	         * changed 2008-01-28 9:31 CET by SafeNet UK Ltd, akroehnert@safenet-inc.com
-        	 * we have to chop off + i + 6 characters instead of just 6
-		 */
+		*slot = n;
 		return (*label = strdup(slot_id + i + 6)) != NULL;
 
 	fprintf(stderr, "could not parse string!\n");
@@ -389,6 +377,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 {
 	PKCS11_SLOT *slot_list, *slot;
+	PKCS11_SLOT *found_slot = NULL;
 	PKCS11_TOKEN *tok;
 	PKCS11_CERT *certs, *selected_cert = NULL;
 	X509 *x509;
@@ -452,8 +441,14 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 			flags[m - 2] = '\0';
 		}
 
+		if (slot_nr != -1 &&
+			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
+			found_slot = slot;
+		}
+
 		if (verbose) {
-			fprintf(stderr, "[%u] %-25.25s  %-16s", n,
+			fprintf(stderr, "[%lu] %-25.25s  %-16s",
+				PKCS11_get_slotid_from_slot(slot),
 				slot->description, flags);
 			if (slot->token) {
 				fprintf(stderr, "  (%s)",
@@ -467,9 +462,9 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	if (slot_nr == -1) {
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
-	} else if (slot_nr >= 0 && slot_nr < slot_count)
-		slot = slot_list + slot_nr;
-	else {
+	} else if (found_slot) {
+		slot = found_slot; 
+	} else {
 		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
@@ -544,6 +539,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 				 int isPrivate)
 {
 	PKCS11_SLOT *slot_list, *slot;
+	PKCS11_SLOT *found_slot = NULL;
 	PKCS11_TOKEN *tok;
 	PKCS11_KEY *keys, *selected_key = NULL;
 	PKCS11_CERT *certs;
@@ -608,8 +604,14 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			flags[m - 2] = '\0';
 		}
 
+		if (slot_nr != -1 &&
+			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
+			found_slot = slot;
+		}
+
 		if (verbose) {
-			fprintf(stderr, "[%u] %-25.25s  %-16s", n,
+			fprintf(stderr, "[%lu] %-25.25s  %-16s",
+				PKCS11_get_slotid_from_slot(slot),
 				slot->description, flags);
 			if (slot->token) {
 				fprintf(stderr, "  (%s)",
@@ -623,9 +625,9 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	if (slot_nr == -1) {
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
-	} else if (slot_nr >= 0 && slot_nr < slot_count)
-		slot = slot_list + slot_nr;
-	else {
+	} else if (found_slot) {
+		slot = found_slot;
+	} else {
 		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;

@@ -3,8 +3,8 @@ AC_PREREQ(2.60)
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
-define([PACKAGE_VERSION_FIX], [5])
-define([PACKAGE_SUFFIX], [-svn])
+define([PACKAGE_VERSION_FIX], [6])
+define([PACKAGE_SUFFIX], [])
 
 AC_INIT([engine_pkcs11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX[]PACKAGE_SUFFIX])
 AC_CONFIG_AUX_DIR([.])
@@ -123,7 +123,7 @@ AC_CHECK_HEADERS([ \
 	locale.h getopt.h dlfcn.h utmp.h \
 ])
 
-PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.4],, [AC_MSG_ERROR([libp11 >= 0.2.4 is required])])
+PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.5],, [AC_MSG_ERROR([libp11 >= 0.2.5 is required])])
 
 dnl These required for svn checkout
 AC_ARG_VAR([XSLTPROC], [xsltproc utility])
