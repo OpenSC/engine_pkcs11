@@ -1,5 +1,7 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
+New in 0.1.8; 200X-XX-XX; Name
+
 New in 0.1.7; 2009-10-20; Andreas Jellinghaus
 * Buffer overrun fixed by David Smith
 
