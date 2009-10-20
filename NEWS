@@ -1,5 +1,8 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
+New in 0.1.7; 200X-XX-XX; Name
+* Buffer overrun fixed by David Smith
+
 New in 0.1.6; 2009-06-15; Andreas Jellinghaus
 * Fixed set_pin (strdup causes segfault in OPENSSL_CLEANSE later)
 * Require new libp11 0.2.5 with new function to get the slot id.

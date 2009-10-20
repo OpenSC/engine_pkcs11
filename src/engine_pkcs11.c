@@ -50,10 +50,9 @@ static PKCS11_CTX *ctx;
  * The memory for this PIN is always owned internally,
  * and may be freed as necessary. Before freeing, the PIN 
  * must be whitened, to prevent security holes.
- *
- * length is always MAX_PIN_LENGTH and possibly not 0 terminated?
  */
 static char *pin = NULL;
+static int pin_length = 0;
 
 static int verbose = 0;
 
@@ -90,8 +89,9 @@ int set_pin(const char *_pin)
 
 	/* Copy the PIN. If the string cannot be copied, NULL
 	   shall be returned and errno shall be set. */
-	pin = malloc(MAX_PIN_LENGTH);
-	strncpy(pin,_pin,MAX_PIN_LENGTH);
+	pin = strdup(_pin);
+	if (pin != NULL)
+		pin_length = strlen(pin);
 
 	return (pin != NULL);
 }
@@ -119,6 +119,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 		if (!pin)
 			return 0;
 		strncpy(pin,mycb->password,MAX_PIN_LENGTH);
+		pin_length = MAX_PIN_LENGTH;
 		return 1;
 	}
 
@@ -158,9 +159,10 @@ int pkcs11_finish(ENGINE * engine)
 		ctx = NULL;
 	}
 	if (pin != NULL) {
-		OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
+		OPENSSL_cleanse(pin, pin_length);
 		free(pin);
 		pin = NULL;
+		pin_length = 0;
 	}
 	return 1;
 }
@@ -182,9 +184,10 @@ int pkcs11_init(ENGINE * engine)
 int pkcs11_rsa_finish(RSA * rsa)
 {
 	if (pin) {
-		OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
+		OPENSSL_cleanse(pin, pin_length);
 		free(pin);
 		pin = NULL;
+		pin_length = 0;
 	}
 	if (module) {
 		free(module);
@@ -688,19 +691,22 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			/* Free the PIN if it has already been 
 			   assigned (i.e, cached by get_pin) */
 			if (pin != NULL) {
-				OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
+				OPENSSL_cleanse(pin, pin_length);
 				free(pin);
 				pin = NULL;
+				pin_length = 0;
 			}
 		} else if (pin == NULL) {
 			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+			pin_length = MAX_PIN_LENGTH;
 			if (pin == NULL) {
 				fail("Could not allocate memory for PIN");
 			}
 			if (!get_pin(ui_method, callback_data) ) {
-				OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
+				OPENSSL_cleanse(pin, pin_length);
 				free(pin);
 				pin = NULL;
+				pin_length = 0;
 				fail("No pin code was entered");
 			}
 		}
@@ -709,9 +715,10 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		if (PKCS11_login(slot, 0, pin)) {
 			/* Login failed, so free the PIN if present */
 			if (pin != NULL) {
-				OPENSSL_cleanse(pin, MAX_PIN_LENGTH);
+				OPENSSL_cleanse(pin, pin_length);
 				free(pin);
 				pin = NULL;
+				pin_length = 0;
 			}
 			fail("Login failed\n");
 		}
