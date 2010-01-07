@@ -495,7 +495,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		fprintf(stderr, "Found %u cert%s:\n", cert_count,
 			(cert_count <= 1) ? "" : "s");
 	}
-	if ((s_slot_cert_id && *s_slot_cert_id) || (cert_id_len == 0)) {
+	if ((s_slot_cert_id && *s_slot_cert_id) && (cert_id_len != 0)) {
 		for (n = 0; n < cert_count; n++) {
 			PKCS11_CERT *k = certs + n;
 
@@ -751,7 +751,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		fprintf(stderr, "Found %u key%s:\n", key_count,
 			(key_count <= 1) ? "" : "s");
 	}
-	if (s_slot_key_id && *s_slot_key_id) {
+	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label != NULL)) {
 		for (n = 0; n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
 

@@ -1,6 +1,10 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
-New in 0.1.8; 200X-XX-XX; Name
+New in 0.1.8; 2010-01-07; Andreas Jellinghaus
+* Fix problem causing slot_n parsing returning not certs or keys 
+  by Camille Moncelier
+* Fix missing declaration of set_init_args symbol
+  by Arfrever Frehtes Taifersar Arahesis
 
 New in 0.1.7; 2009-10-20; Andreas Jellinghaus
 * Buffer overrun fixed by David Smith
