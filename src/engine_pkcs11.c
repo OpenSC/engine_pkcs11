@@ -364,9 +364,10 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	}
 
 	/* ... or "label_" */
-	if (strncmp(slot_id + i, "label_", 6) == 0)
+	if (strncmp(slot_id + i, "label_", 6) == 0) {
 		*slot = n;
 		return (*label = strdup(slot_id + i + 6)) != NULL;
+	}
 
 	fprintf(stderr, "could not parse string!\n");
 	return 0;
