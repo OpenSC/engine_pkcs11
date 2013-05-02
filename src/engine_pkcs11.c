@@ -54,6 +54,17 @@ static PKCS11_CTX *ctx;
 static char *pin = NULL;
 static int pin_length = 0;
 
+/* Convenience function for wiping and freeing the stored PIN. */
+static void zero_pin()
+{
+	if (pin) {
+		OPENSSL_cleanse(pin, pin_length);
+		free(pin);
+		pin = NULL;
+		pin_length = 0;
+	}
+}
+
 static int verbose = 0;
 
 static char *module = NULL;
@@ -158,12 +169,7 @@ int pkcs11_finish(ENGINE * engine)
 		PKCS11_CTX_free(ctx);
 		ctx = NULL;
 	}
-	if (pin != NULL) {
-		OPENSSL_cleanse(pin, pin_length);
-		free(pin);
-		pin = NULL;
-		pin_length = 0;
-	}
+	zero_pin();
 	return 1;
 }
 
@@ -183,12 +189,7 @@ int pkcs11_init(ENGINE * engine)
 
 int pkcs11_rsa_finish(RSA * rsa)
 {
-	if (pin) {
-		OPENSSL_cleanse(pin, pin_length);
-		free(pin);
-		pin = NULL;
-		pin_length = 0;
-	}
+	zero_pin();
 	if (module) {
 		free(module);
 		module = NULL;
@@ -691,12 +692,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		if (tok->secureLogin) {
 			/* Free the PIN if it has already been 
 			   assigned (i.e, cached by get_pin) */
-			if (pin != NULL) {
-				OPENSSL_cleanse(pin, pin_length);
-				free(pin);
-				pin = NULL;
-				pin_length = 0;
-			}
+			zero_pin();
 		} else if (pin == NULL) {
 			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
 			pin_length = MAX_PIN_LENGTH;
@@ -704,10 +700,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 				fail("Could not allocate memory for PIN");
 			}
 			if (!get_pin(ui_method, callback_data) ) {
-				OPENSSL_cleanse(pin, pin_length);
-				free(pin);
-				pin = NULL;
-				pin_length = 0;
+				zero_pin();
 				fail("No pin code was entered");
 			}
 		}
@@ -715,12 +708,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		/* Now login in with the (possibly NULL) pin */
 		if (PKCS11_login(slot, 0, pin)) {
 			/* Login failed, so free the PIN if present */
-			if (pin != NULL) {
-				OPENSSL_cleanse(pin, pin_length);
-				free(pin);
-				pin = NULL;
-				pin_length = 0;
-			}
+			zero_pin();
 			fail("Login failed\n");
 		}
 		/* Login successful, PIN retained in case further logins are 
