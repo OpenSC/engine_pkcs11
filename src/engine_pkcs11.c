@@ -642,13 +642,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
 	}
-/* Removed for interop with some other pkcs11 libs. */
-#if 0
-	if (!tok->initialized) {
-		fprintf(stderr, "Found uninitialized token; \n");
-		return NULL;
-	}
-#endif
+
 	if (isPrivate && !tok->userPinSet && !tok->readOnly) {
 		fprintf(stderr, "Found slot without user PIN\n");
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
