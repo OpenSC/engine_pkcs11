@@ -470,7 +470,8 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 			strcpy(flags, "no token");
 		}
 
-		if ((m = strlen(flags)) != 0)
+		m = strlen(flags);
+		if (m)
 			flags[m - 2] = '\0';
 
 		if (slot_nr != -1 &&
@@ -492,7 +493,8 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 	}
 
 	if (slot_nr == -1) {
-		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
+		slot = PKCS11_find_token(ctx, slot_list, slot_count);
+		if (!slot)
 			FAIL("Didn't find any tokens");
 	} else if (found_slot) {
 		slot = found_slot;
@@ -631,7 +633,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 			strcpy(flags, "no token");
 		}
 
-		if ((m = strlen(flags)) != 0)
+		m = strlen(flags);
+		if (m)
 			flags[m - 2] = '\0';
 
 		if (slot_nr != -1 &&
@@ -652,7 +655,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	}
 
 	if (slot_nr == -1) {
-		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
+		slot = PKCS11_find_token(ctx, slot_list, slot_count);
+		if (!slot)
 			FAIL("Didn't find any tokens");
 	} else if (found_slot) {
 		slot = found_slot;
