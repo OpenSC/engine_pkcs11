@@ -40,14 +40,14 @@
 #endif
 
 /** The maximum length of an internally-allocated PIN */
-#define MAX_PIN_LENGTH   32
+#define MAX_PIN_LENGTH 32
 
 static PKCS11_CTX *ctx;
 
-/** 
+/**
  * The PIN used for login. Cache for the get_pin function.
  * The memory for this PIN is always owned internally,
- * and may be freed as necessary. Before freeing, the PIN 
+ * and may be freed as necessary. Before freeing, the PIN
  * must be whitened, to prevent security holes.
  */
 static char *pin = NULL;
@@ -115,7 +115,7 @@ int inc_verbose(void)
 /* either get the pin code from the supplied callback data, or get the pin
  * via asking our self. In both cases keep a copy of the pin code in the
  * pin variable (strdup'ed copy). */
-static int get_pin(UI_METHOD * ui_method, void *callback_data)
+static int get_pin(UI_METHOD *ui_method, void *callback_data)
 {
 	int rv = 0;
 	UI *ui;
@@ -157,7 +157,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 	if (UI_process(ui)) {
 		FAIL("UI_process failed");
 	}
-	
+
 	rv = 1; /* success! */
 
 cleanup_release_ui:
@@ -173,7 +173,7 @@ int set_init_args(const char *init_args_orig)
 	return 1;
 }
 
-int pkcs11_finish(ENGINE * engine)
+int pkcs11_finish(ENGINE *engine)
 {
 	if (ctx) {
 		PKCS11_CTX_unload(ctx);
@@ -184,7 +184,7 @@ int pkcs11_finish(ENGINE * engine)
 	return 1;
 }
 
-int pkcs11_init(ENGINE * engine)
+int pkcs11_init(ENGINE *engine)
 {
 	if (verbose) {
 		fprintf(stderr, "initializing engine\n");
@@ -200,7 +200,7 @@ int pkcs11_init(ENGINE * engine)
 #undef CLEANUP
 #define CLEANUP cleanup_release_ctx
 
-        PKCS11_CTX_init_args(ctx, init_args);
+	PKCS11_CTX_init_args(ctx, init_args);
 	if (PKCS11_CTX_load(ctx, module) < 0) {
 		FAIL1("Unable to load module '%s'", module);
 	}
@@ -215,7 +215,7 @@ cleanup_done:
 	return 0;
 }
 
-int pkcs11_rsa_finish(RSA * rsa)
+int pkcs11_rsa_finish(RSA *rsa)
 {
 	zero_pin();
 	if (module) {
@@ -227,7 +227,7 @@ int pkcs11_rsa_finish(RSA * rsa)
 	return 1;
 }
 
-static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
+static int hex_to_bin(const char *in, unsigned char *out, size_t *outlen)
 {
 	size_t left, count = 0;
 
@@ -279,7 +279,7 @@ cleanup_zero_outlen:
 /* parse string containing slot and id information */
 
 static int parse_slot_id_string(const char *slot_id, int *slot,
-				unsigned char *id, size_t * id_len,
+				unsigned char *id, size_t *id_len,
 				char **label)
 {
 	int n, i;
@@ -363,7 +363,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	if (slot_id[i + 5] == 0) {
 		*slot = n;
 		*id_len = 0;
-		return 1; 
+		return 1;
 	}
 
 	if (slot_id[i + 5] != '-') {
@@ -389,7 +389,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	/* ... or "label_" */
 	if (strncmp(slot_id + i, "label_", 6) == 0) {
 		*slot = n;
-                *label = strdup(slot_id + i + 6);
+		*label = strdup(slot_id + i + 6);
 		return !!*label;
 	}
 
@@ -404,7 +404,7 @@ cleanup_done:
 /* prototype for OpenSSL ENGINE_load_cert */
 /* used by load_cert_ctrl via ENGINE_ctrl for now */
 
-static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
+static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_SLOT *found_slot = NULL;
@@ -478,7 +478,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		}
 
 		if (slot_nr != -1 &&
-			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
+		    slot_nr == PKCS11_get_slotid_from_slot(slot)) {
 			found_slot = slot;
 		}
 
@@ -499,7 +499,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			FAIL("Didn't find any tokens");
 	} else if (found_slot) {
-		slot = found_slot; 
+		slot = found_slot;
 	} else {
 		FAIL1("Invalid slot number: %d", slot_nr);
 	}
@@ -551,7 +551,7 @@ cleanup_done:
 	return x509;
 }
 
-int load_cert_ctrl(ENGINE * e, void *p)
+int load_cert_ctrl(ENGINE *e, void *p)
 {
 	struct {
 		const char *s_slot_cert_id;
@@ -565,8 +565,8 @@ int load_cert_ctrl(ENGINE * e, void *p)
 	return !!parms->cert;
 }
 
-static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
-				 UI_METHOD * ui_method, void *callback_data,
+static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
+				 UI_METHOD *ui_method, void *callback_data,
 				 int isPrivate)
 {
 	PKCS11_SLOT *slot_list, *slot;
@@ -642,7 +642,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		}
 
 		if (slot_nr != -1 &&
-			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
+		    slot_nr == PKCS11_get_slotid_from_slot(slot)) {
 			found_slot = slot;
 		}
 
@@ -711,7 +711,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		   then use a NULL pin. Otherwise, check if a PIN exists. If
 		   not, allocate and obtain a new PIN. */
 		if (tok->secureLogin) {
-			/* Free the PIN if it has already been 
+			/* Free the PIN if it has already been
 			   assigned (i.e, cached by get_pin) */
 			zero_pin();
 		} else if (!pin) {
@@ -720,7 +720,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 				FAIL("Could not allocate memory for PIN");
 			}
 			pin_length = MAX_PIN_LENGTH;
-			if (!get_pin(ui_method, callback_data) ) {
+			if (!get_pin(ui_method, callback_data)) {
 				zero_pin();
 				FAIL("No PIN was entered");
 			}
@@ -732,11 +732,11 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			zero_pin();
 			FAIL("Login failed");
 		}
-		/* Login successful, PIN retained in case further logins are 
+		/* Login successful, PIN retained in case further logins are
 		   required. This will occur on subsequent calls to the
 		   pkcs11_load_key function. Subsequent login calls should be
 		   relatively fast (the token should maintain its own login
-		   state), although there may still be a slight performance 
+		   state), although there may still be a slight performance
 		   penalty. We could maintain state noting that successful
 		   login has been performed, but this state may not be updated
 		   if the token is removed and reinserted between calls. It
@@ -792,7 +792,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	if (isPrivate) {
 		pk = PKCS11_get_private_key(selected_key);
 	} else {
-		/*pk = PKCS11_get_public_key(&keys[0]);
+		/* pk = PKCS11_get_public_key(&keys[0]);
 		   need a get_public_key? */
 		pk = PKCS11_get_private_key(selected_key);
 	}
@@ -812,8 +812,8 @@ cleanup_release_slots:
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
-				 UI_METHOD * ui_method, void *callback_data)
+EVP_PKEY *pkcs11_load_public_key(ENGINE *e, const char *s_key_id,
+				 UI_METHOD *ui_method, void *callback_data)
 {
 	EVP_PKEY *pk = NULL;
 
@@ -825,8 +825,8 @@ cleanup_done:
 	return pk;
 }
 
-EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
-				  UI_METHOD * ui_method, void *callback_data)
+EVP_PKEY *pkcs11_load_private_key(ENGINE *e, const char *s_key_id,
+				  UI_METHOD *ui_method, void *callback_data)
 {
 	EVP_PKEY *pk;
 
