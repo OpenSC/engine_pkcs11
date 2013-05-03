@@ -281,6 +281,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 				unsigned char *id, size_t *id_len,
 				char **label)
 {
+	size_t slot_id_len;
 	int n, i;
 
 	if (!slot_id)
@@ -293,10 +294,12 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 #define HEXDIGITS "01234567890ABCDEFabcdef"
 #define DIGITS "0123456789"
 
+	slot_id_len = strlen(slot_id);
+
 	/* first: pure hex number (id, slot is 0) */
-	if (strspn(slot_id, HEXDIGITS) == strlen(slot_id)) {
+	if (strspn(slot_id, HEXDIGITS) == slot_id_len) {
 		/* ah, easiest case: only hex. */
-		if ((strlen(slot_id) + 1) / 2 > *id_len)
+		if ((slot_id_len + 1) / 2 > *id_len)
 			FAIL("Id string too long!");
 		*slot = 0;
 		return hex_to_bin(slot_id, id, id_len);
@@ -316,11 +319,11 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 			return 1;
 		}
 
-		if (strspn(slot_id + i, HEXDIGITS) + i != strlen(slot_id))
+		if (strspn(slot_id + i, HEXDIGITS) + i != slot_id_len)
 			FAIL("Non-hex Id after slot number");
 
 		/* ah, rest is hex */
-		if ((strlen(slot_id) - i + 1) / 2 > *id_len)
+		if ((slot_id_len - i + 1) / 2 > *id_len)
 			FAIL1("Id string too long (max=%d)", (int)*id_len);
 
 		*slot = n;
@@ -329,11 +332,11 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 
 	/* third: id_<id>  */
 	if (strncmp(slot_id, "id_", 3) == 0) {
-		if (strspn(slot_id + 3, HEXDIGITS) + 3 != strlen(slot_id))
+		if (strspn(slot_id + 3, HEXDIGITS) + 3 != slot_id_len)
 			FAIL("Non-hex Id after 'id_'");
 
 		/* ah, rest is hex */
-		if ((strlen(slot_id) - 3 + 1) / 2 > *id_len)
+		if ((slot_id_len - 3 + 1) / 2 > *id_len)
 			FAIL1("Id string too long (max=%d)", (int)*id_len);
 
 		*slot = 0;
@@ -372,11 +375,11 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	/* now followed by "id_" */
 	if (strncmp(slot_id + i, "id_", 3) == 0) {
 		if (strspn(slot_id + i + 3, HEXDIGITS) + 3 + i !=
-		    strlen(slot_id))
+		    slot_id_len)
 			FAIL("Non-hex data after 'id_' after 'slot_'");
 
 		/* ah, rest is hex */
-		if ((strlen(slot_id) - i - 3 + 1) / 2 > *id_len)
+		if ((slot_id_len - i - 3 + 1) / 2 > *id_len)
 			FAIL1("Id string too long (max=%d)", (int)*id_len);
 
 		*slot = n;
