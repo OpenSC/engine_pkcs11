@@ -93,7 +93,7 @@ int set_module(const char *modulename)
 int set_pin(const char *_pin)
 {
 	/* Pre-condition check */
-	if (_pin == NULL) {
+	if (!_pin) {
 		errno = EINVAL;
 		return 0;
 	}
@@ -101,10 +101,10 @@ int set_pin(const char *_pin)
 	/* Copy the PIN. If the string cannot be copied, NULL
 	   shall be returned and errno shall be set. */
 	pin = strdup(_pin);
-	if (pin != NULL)
+	if (pin)
 		pin_length = strlen(pin);
 
-	return (pin != NULL);
+	return !!pin;
 }
 
 int inc_verbose(void)
@@ -125,7 +125,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 	} *mycb = callback_data;
 
 	/* pin in the call back data, copy and use */
-	if (mycb != NULL && mycb->password) {
+	if (mycb && mycb->password) {
 		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
 		if (!pin)
 			return 0;
@@ -136,9 +136,9 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 
 	/* call ui to ask for a pin */
 	ui = UI_new();
-	if (ui_method != NULL)
+	if (ui_method)
 		UI_set_method(ui, ui_method);
-	if (callback_data != NULL)
+	if (callback_data)
 		UI_set_app_data(ui, callback_data);
 
 	if (!UI_add_input_string
@@ -202,7 +202,7 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 {
 	size_t left, count = 0;
 
-	if (in == NULL || *in == '\0') {
+	if (!in || *in == '\0') {
 		*outlen = 0;
 		return 1;
 	}
@@ -317,7 +317,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	/* label_<label>  */
 	if (strncmp(slot_id, "label_", 6) == 0) {
 		*label = strdup(slot_id + 6);
-		return *label != NULL;
+		return !!*label;
 	}
 
 	/* last try: it has to be slot_<slot> and then "-id_<cert>" */
@@ -367,7 +367,8 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	/* ... or "label_" */
 	if (strncmp(slot_id + i, "label_", 6) == 0) {
 		*slot = n;
-		return (*label = strdup(slot_id + i + 6)) != NULL;
+                *label = strdup(slot_id + i + 6);
+		return !!*label;
 	}
 
 	fprintf(stderr, "could not parse string!\n");
@@ -410,7 +411,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		if (verbose) {
 			fprintf(stderr, "Looking in slot %d for certificate: ",
 				slot_nr);
-			if (cert_label == NULL) {
+			if (!cert_label) {
 				for (n = 0; n < cert_id_len; n++)
 					fprintf(stderr, "%02x", cert_id[n]);
 				fprintf(stderr, "\n");
@@ -476,7 +477,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	}
 	tok = slot->token;
 
-	if (tok == NULL) {
+	if (!tok) {
 		fprintf(stderr, "Found empty token; \n");
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
@@ -510,14 +511,14 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		selected_cert = certs;	/* use first */
 	}
 
-	if (selected_cert == NULL) {
+	if (!selected_cert) {
 		fprintf(stderr, "certificate not found.\n");
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
 	}
 
 	x509 = X509_dup(selected_cert->x509);
-	if (cert_label != NULL)
+	if (cert_label)
 		free(cert_label);
 	return x509;
 }
@@ -529,14 +530,11 @@ int load_cert_ctrl(ENGINE * e, void *p)
 		X509 *cert;
 	} *parms = p;
 
-	if (parms->cert != NULL)
+	if (parms->cert)
 		return 0;
 
 	parms->cert = pkcs11_load_cert(e, parms->s_slot_cert_id);
-	if (parms->cert == NULL)
-		return 0;
-
-	return 1;
+	return !!parms->cert;
 }
 
 static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
@@ -574,7 +572,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		if (verbose) {
 			fprintf(stderr, "Looking in slot %d for key: ",
 				slot_nr);
-			if (key_label == NULL) {
+			if (!key_label) {
 				for (n = 0; n < key_id_len; n++)
 					fprintf(stderr, "%02x", key_id[n]);
 				fprintf(stderr, "\n");
@@ -639,7 +637,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	}
 	tok = slot->token;
 
-	if (tok == NULL) {
+	if (!tok) {
 		fprintf(stderr, "Found empty token; \n");
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
 		return NULL;
@@ -693,12 +691,12 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			/* Free the PIN if it has already been 
 			   assigned (i.e, cached by get_pin) */
 			zero_pin();
-		} else if (pin == NULL) {
+		} else if (!pin) {
 			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
-			pin_length = MAX_PIN_LENGTH;
-			if (pin == NULL) {
+			if (!pin) {
 				fail("Could not allocate memory for PIN");
 			}
+			pin_length = MAX_PIN_LENGTH;
 			if (!get_pin(ui_method, callback_data) ) {
 				zero_pin();
 				fail("No pin code was entered");
@@ -740,7 +738,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		fprintf(stderr, "Found %u key%s:\n", key_count,
 			(key_count <= 1) ? "" : "s");
 	}
-	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label != NULL)) {
+	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label)) {
 		for (n = 0; n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
 
@@ -749,7 +747,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 					k->isPrivate ? 'P' : ' ',
 					k->needLogin ? 'L' : ' ', k->label);
 			}
-			if (key_label == NULL) {
+			if (!key_label) {
 				if (key_id_len != 0 && k->id_len == key_id_len
 				    && memcmp(k->id, key_id, key_id_len) == 0) {
 					selected_key = k;
@@ -764,7 +762,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		selected_key = keys;	/* use first */
 	}
 
-	if (selected_key == NULL) {
+	if (!selected_key) {
 		fprintf(stderr, "key not found.\n");
 		return NULL;
 	}
@@ -776,7 +774,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		   need a get_public_key? */
 		pk = PKCS11_get_private_key(selected_key);
 	}
-	if (key_label != NULL)
+	if (key_label)
 		free(key_label);
 	return pk;
 }
@@ -787,7 +785,7 @@ EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
 	EVP_PKEY *pk;
 
 	pk = pkcs11_load_key(e, s_key_id, ui_method, callback_data, 0);
-	if (pk == NULL)
+	if (!pk)
 		fail("PKCS11_load_public_key returned NULL\n");
 	return pk;
 }
@@ -798,7 +796,7 @@ EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 	EVP_PKEY *pk;
 
 	pk = pkcs11_load_key(e, s_key_id, ui_method, callback_data, 1);
-	if (pk == NULL)
+	if (!pk)
 		fail("PKCS11_get_private_key returned NULL\n");
 	return pk;
 }
