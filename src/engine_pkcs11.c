@@ -754,7 +754,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 			(key_count <= 1) ? "" : "s");
 
 	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label)) {
-		for (n = 0; n < key_count; n++) {
+		for (n = 0; !selected_key && n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
 
 			if (verbose)
@@ -769,7 +769,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 				}
 			} else {
 				if (strcmp(k->label, key_label) == 0)
-					selected_key = k; /* FIXME: ajf -- add break here? */
+					selected_key = k;
 			}
 		}
 	} else {
