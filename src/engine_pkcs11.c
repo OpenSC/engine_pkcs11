@@ -39,15 +39,6 @@
 #define strncasecmp strnicmp
 #endif
 
-static const char * SLOT_ID_USAGE =
-	"unable to parse slot cert expression '%s'\n"
-	"supported formats: <id>, <slot>:<id>, id_<id>,"
-	" slot_<slot>-id_<id>, label_<label>,"
-	" slot_<slot>-label_<label>\n"
-	"where <slot> is the slot number as normal integer,\n"
-	"and <id> is the id number as hex string,\n"
-	"and <label> is the textual key label string.\n";
-
 /** The maximum length of an internally-allocated PIN */
 #define MAX_PIN_LENGTH 32
 
@@ -421,14 +412,14 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 		fprintf(stderr, "Found %u slot%s\n", slot_count,
 			(slot_count <= 1) ? "" : "s");
 
-	// FIXME: exit early on found_slot?
+	/* FIXME: exit early on found_slot? */
 	for (n = 0; n < slot_count; n++) {
 		slot = slot_list + n;
 		flags[0] = '\0';
 		if (slot->token) {
 			if (!slot->token->initialized)
 				strcat(flags, "uninitialized, ");
-			else if (!slot->token->userPinSet) // FIXME: weird!
+			else if (!slot->token->userPinSet) /* FIXME: weird! */
 				strcat(flags, "no pin, ");
 			if (slot->token->loginRequired)
 				strcat(flags, "login, ");
@@ -463,6 +454,48 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 	return found_slot;
 }
 
+/* a second layer of function call lets the inner call to have
+ * multiple exits gracefully. */
+static int parse_slot_id_string_aux(const char *slot_id,
+				    unsigned int *slot_nr,
+				    unsigned char *id,
+				    size_t *id_len,
+				    char **label,
+				    const char *use)
+{
+	int rc = parse_slot_id_string(slot_id, slot_nr,
+				      id, id_len, label);
+
+#undef CLEANUP
+#define CLEANUP cleanup_done
+
+	if (!rc)
+		FAIL1("could not parse '%s' as slot_id:\n"
+		      "  supported formats: <id>, <slot>:<id>, id_<id>,"
+		      " slot_<slot>-id_<id>, label_<label>,"
+		      " slot_<slot>-label_<label>\n"
+		      "  where <slot> is the slot number as decimal integer,\n"
+		      "  and <id> is the id number as hex nybbles,\n"
+		      "  and <label> is the key label text string.\n",
+		      slot_id);
+
+	if (verbose) {
+		fprintf(stderr, "Looking in slot %d for %s: ", slot_nr, use);
+		if (*label) {
+			fprintf(stderr, "label: '%s'\n", *label);
+		} else {
+			int n;
+			fprintf(stderr, "id(hex): '");
+			for (n = 0; n < *id_len; n++)
+				fprintf(stderr, "%02x", id[n]);
+			fprintf(stderr, "'\n");
+		}
+	}
+
+cleanup_done:
+	return rc;
+}
+
 #define MAX_VALUE_LEN	200
 
 /* prototype for OpenSSL ENGINE_load_cert */
@@ -484,25 +517,11 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (s_slot_cert_id && *s_slot_cert_id) {
-		n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
-					 cert_id, &cert_id_len, &cert_label);
-		if (!n)
-			FAIL2("error parsing '%s':\n%s",
-			      s_slot_cert_id, SLOT_ID_USAGE);
-
-		if (verbose) {
-			fprintf(stderr, "Looking in slot %d for certificate: ",
-				slot_nr);
-			if (!cert_label) {
-				for (n = 0; n < cert_id_len; n++)
-					fprintf(stderr, "%02x", cert_id[n]);
-				fprintf(stderr, "\n");
-			} else
-				fprintf(stderr, "label: %s\n", cert_label);
-
-		}
-	}
+	if (s_slot_cert_id && *s_slot_cert_id &&
+	    !parse_slot_id_string_aux(s_slot_cert_id, &slot_nr,
+				      cert_id, &cert_id_len, &cert_label,
+				      "certificate"))
+		return NULL;
 
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &slot_count) < 0)
 		FAIL("Failed to enumerate slots");
@@ -599,25 +618,11 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (s_slot_key_id && *s_slot_key_id) {
-		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
-					 key_id, &key_id_len, &key_label);
-
-		if (!n)
-			FAIL2("error parsing '%s':\n%s",
-			      s_slot_key_id, SLOT_ID_USAGE);
-
-		if (verbose) {
-			fprintf(stderr, "Looking in slot %d for key: ",
-				slot_nr);
-			if (!key_label) {
-				for (n = 0; n < key_id_len; n++)
-					fprintf(stderr, "%02x", key_id[n]);
-				fprintf(stderr, "\n");
-			} else
-				fprintf(stderr, "label: %s\n", key_label);
-		}
-	}
+	if (s_slot_key_id && *s_slot_key_id &&
+	    !parse_slot_id_string_aux(s_slot_key_id, &slot_nr,
+				      key_id, &key_id_len, &key_label,
+				      "key"))
+		return NULL;
 
 	if (PKCS11_enumerate_slots(ctx, &slot_list, &slot_count) < 0)
 		FAIL("Failed to enumerate slots");
