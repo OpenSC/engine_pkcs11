@@ -507,10 +507,9 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 	if (!tok)
 		FAIL("Found empty token");
 
-	if (verbose) {
-		fprintf(stderr, "Found slot:  %s\n", slot->description);
-		fprintf(stderr, "Found token: %s\n", slot->token->label);
-	}
+	if (verbose)
+		fprintf(stderr, "Found slot '%s', token '%s'\n",
+			slot->description, slot->token->label);
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
@@ -672,10 +671,9 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	if (isPrivate && !tok->userPinSet && !tok->readOnly)
 		FAIL("Found slot without user PIN");
 
-	if (verbose) {
-		fprintf(stderr, "Found slot:  %s\n", slot->description);
-		fprintf(stderr, "Found token: %s\n", slot->token->label);
-	}
+	if (verbose)
+		fprintf(stderr, "Found slot '%s', token '%s'\n",
+			slot->description, slot->token->label);
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
