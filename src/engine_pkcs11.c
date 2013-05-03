@@ -50,8 +50,8 @@ static PKCS11_CTX *ctx;
  * and may be freed as necessary. Before freeing, the PIN
  * must be whitened, to prevent security holes.
  */
-static char *pin = NULL;
-static int pin_length = 0;
+static char *pin;
+static int pin_length;
 
 /* Convenience function for wiping and freeing the stored PIN. */
 static void zero_pin()
@@ -64,11 +64,11 @@ static void zero_pin()
 	}
 }
 
-static int verbose = 0;
+static int verbose;
 
-static char *module = NULL;
+static char *module;
 
-static char *init_args = NULL;
+static char *init_args;
 
 int set_module(const char *modulename)
 {
