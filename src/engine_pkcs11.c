@@ -349,7 +349,8 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 	/* last try: it has to be slot_<slot> and then "-id_<cert>" */
 
 	if (strncmp(slot_id, "slot_", 5) != 0)
-		FAIL("Format does not start with 'slot_', which was last option");
+		FAIL1("Unrecognized format '%s' (expected 'slot_...')",
+		      slot_id);
 
 	/* slot is an decimal int. */
 	if (sscanf(slot_id + 5, "%d", &n) != 1)
