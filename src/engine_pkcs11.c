@@ -39,6 +39,15 @@
 #define strncasecmp strnicmp
 #endif
 
+static const char * SLOT_ID_USAGE =
+	"unable to parse slot cert expression '%s'\n"
+	"supported formats: <id>, <slot>:<id>, id_<id>,"
+	" slot_<slot>-id_<id>, label_<label>,"
+	" slot_<slot>-label_<label>\n"
+	"where <slot> is the slot number as normal integer,\n"
+	"and <id> is the id number as hex string,\n"
+	"and <label> is the textual key label string.\n";
+
 /** The maximum length of an internally-allocated PIN */
 #define MAX_PIN_LENGTH 32
 
@@ -424,17 +433,10 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 	if (s_slot_cert_id && *s_slot_cert_id) {
 		n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
 					 cert_id, &cert_id_len, &cert_label);
-		if (!n) {
-			fprintf(stderr,
-				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
-			fprintf(stderr,
-				"where <slot> is the slot number as normal integer,\n");
-			fprintf(stderr,
-				"and <id> is the id number as hex string.\n");
-			fprintf(stderr,
-				"and <label> is the textual key label string.\n");
-			FAIL("Could not parse slot_id specification");
-		}
+		if (!n)
+			FAIL2("error parsing '%s':\n%s",
+			      s_slot_cert_id, SLOT_ID_USAGE);
+
 		if (verbose) {
 			fprintf(stderr, "Looking in slot %d for certificate: ",
 				slot_nr);
@@ -587,17 +589,10 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
 					 key_id, &key_id_len, &key_label);
 
-		if (!n) {
-			fprintf(stderr,
-				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
-			fprintf(stderr,
-				"where <slot> is the slot number as normal integer,\n");
-			fprintf(stderr,
-				"and <id> is the id number as hex string.\n");
-			fprintf(stderr,
-				"and <label> is the textual key label string.\n");
-			FAIL("Could not parse slot_id specification");
-		}
+		if (!n)
+			FAIL2("error parsing '%s':\n%s",
+			      s_slot_key_id, SLOT_ID_USAGE);
+
 		if (verbose) {
 			fprintf(stderr, "Looking in slot %d for key: ",
 				slot_nr);

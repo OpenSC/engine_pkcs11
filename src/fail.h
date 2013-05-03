@@ -56,4 +56,12 @@
 		goto CLEANUP;						\
 	} while (0)
 
+/** Exit with an error message and two arguments. */
+#define FAIL2(msg, arg1, arg2)						\
+	do {								\
+		fprintf(stderr, "%s: " msg "\n",			\
+			__func__ , arg1, arg2);				\
+		goto CLEANUP;						\
+	} while (0)
+
 #endif /* ENGINE_PKCS11_SRC_FAIL_H */
