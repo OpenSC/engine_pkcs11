@@ -401,54 +401,56 @@ cleanup_done:
 
 static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 			       PKCS11_SLOT *slot_list,
-			       int *slot_nr)
+			       const int slot_nr)
 {
-	PKCS11_SLOT *slot;
-	char flags[64];
 	PKCS11_SLOT *found_slot = NULL;
-	int n, m;
+	int n;
 
 	if (verbose)
-		fprintf(stderr, "Found %u slot%s\n", slot_count,
-			(slot_count <= 1) ? "" : "s");
+		fprintf(stderr, "Num slots: %u\n", slot_count);
 
-	/* FIXME: exit early on found_slot? */
 	for (n = 0; n < slot_count; n++) {
-		slot = slot_list + n;
+		char flags[64];
+		int m;
+		PKCS11_SLOT *slot = slot_list + n;
+		unsigned long slotid = PKCS11_get_slotid_from_slot(slot);
+		if (slot_nr != -1 && slot_nr == slotid)
+			found_slot = slot;
+
+		if (!verbose) {
+			if (found_slot)
+				break;
+			else
+				continue;
+		}
+
 		flags[0] = '\0';
-		if (slot->token) {
-			if (!slot->token->initialized)
-				strcat(flags, "uninitialized, ");
-			else if (!slot->token->userPinSet) /* FIXME: weird! */
+		if (!slot->token) {
+			strcpy(flags, "no token, ");
+		} else if (!slot->token->initialized) {
+			strcat(flags, "uninitialized, ");
+		} else {
+			if (!slot->token->userPinSet)
 				strcat(flags, "no pin, ");
 			if (slot->token->loginRequired)
 				strcat(flags, "login, ");
 			if (slot->token->readOnly)
 				strcat(flags, "ro, ");
-		} else {
-			strcpy(flags, "no token");
 		}
 
 		m = strlen(flags);
 		if (m)
 			flags[m - 2] = '\0';
 
-		if (*slot_nr != -1 &&
-		    *slot_nr == PKCS11_get_slotid_from_slot(slot))
-			found_slot = slot;
+		fprintf(stderr, "[%lu] %-25.25s  %-16s",
+			slotid, slot->description, flags);
 
-		if (verbose) {
-			fprintf(stderr, "[%lu] %-25.25s  %-16s",
-				PKCS11_get_slotid_from_slot(slot),
-				slot->description, flags);
+		if (slot->token)
+			fprintf(stderr, "  (%s)",
+				slot->token->label[0] ?
+				slot->token->label : "no label");
 
-			if (slot->token)
-				fprintf(stderr, "  (%s)",
-					slot->token->label[0] ?
-					slot->token->label : "no label");
-
-			fprintf(stderr, "\n");
-		}
+		fprintf(stderr, "\n");
 	}
 
 	return found_slot;
@@ -529,7 +531,7 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 #undef CLEANUP
 #define CLEANUP cleanup_release_slots
 
-	found_slot = scan_slots(slot_count, slot_list, &slot_nr);
+	found_slot = scan_slots(slot_count, slot_list, slot_nr);
 
 	if (slot_nr == -1) {
 		slot = PKCS11_find_token(ctx, slot_list, slot_count);
@@ -613,7 +615,6 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	size_t key_id_len = sizeof(key_id);
 	char *key_label = NULL;
 	int slot_nr = -1;
-	char flags[64];
 
 #undef CLEANUP
 #define CLEANUP cleanup_done
@@ -630,7 +631,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 #undef CLEANUP
 #define CLEANUP cleanup_release_slots
 
-	found_slot = scan_slots(slot_count, slot_list, &slot_nr);
+	found_slot = scan_slots(slot_count, slot_list, slot_nr);
 
 	if (slot_nr == -1) {
 		slot = PKCS11_find_token(ctx, slot_list, slot_count);
