@@ -531,6 +531,61 @@ cleanup_done:
 	return rv;
 }
 
+PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
+			unsigned int cert_count,
+			char * id,
+			unsigned int id_len)
+{
+	PKCS11_CERT * rv = NULL;
+	unsigned int n;
+	unsigned int cert_num = 0;
+
+	if (verbose)
+		fprintf(stderr, "Found %u certificate%s:\n",
+			cert_count, (cert_count <= 1) ? "" : "s");
+
+	for (n = 0; n < cert_count; n++) {
+		PKCS11_CERT *c = certs + n;
+
+		if (id_len && c->id_len == id_len &&
+		    memcmp(c->id, id, id_len) == 0) {
+			rv = c;
+			cert_num = n;
+		}
+
+		if (!verbose) {
+			if (rv)
+				break;
+			else
+				continue;
+		}
+
+		fprintf(stderr, "  %2u    %s", n + 1, c->label);
+		if (c->x509) {
+			X509_NAME *subj_name = X509_get_subject_name(c->x509);
+			char *dn = X509_NAME_oneline(subj_name, NULL, 0);
+			fprintf(stderr, " (%s)", dn ? dn : "<no name>");
+			OPENSSL_free(dn);
+		}
+		fprintf(stderr, "\n");
+	}
+
+	/* If we couldn't find a match, just use the first one. */
+	if (!rv)
+		rv = certs;
+
+	if (verbose) {
+		if (rv)
+			fprintf(stderr, "Selecting certificate %u (\"%s\")\n",
+				cert_num, rv->label);
+		else
+			fprintf(stderr, "No certificate found\n");
+	}
+
+
+	return rv;
+}
+
 #define MAX_VALUE_LEN	200
 
 /* prototype for OpenSSL ENGINE_load_cert */
@@ -576,18 +631,8 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 		fprintf(stderr, "Found %u cert%s:\n", cert_count,
 			(cert_count <= 1) ? "" : "s");
 
-	if ((s_slot_cert_id && *s_slot_cert_id) && (cert_id_len != 0)) {
-		for (n = 0; n < cert_count; n++) {
-			PKCS11_CERT *k = certs + n;
-
-			if (cert_id_len != 0 && k->id_len == cert_id_len &&
-			    memcmp(k->id, cert_id, cert_id_len) == 0) {
-				selected_cert = k;
-			}
-		}
-	} else {
-		selected_cert = certs;	/* use first */
-	}
+	selected_cert = scan_certs(certs, cert_count,
+				   cert_id, cert_id_len);
 
 	if (!selected_cert)
 		FAIL("Certificate not found.");
@@ -660,24 +705,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	if (isPrivate && !tok->userPinSet && !tok->readOnly)
 		FAIL("Found slot without user PIN");
 
-	if (verbose) {
-		fprintf(stderr, "Found %u certificate%s:\n", cert_count,
-			(cert_count <= 1) ? "" : "s");
-		for (n = 0; n < cert_count; n++) {
-			PKCS11_CERT *c = certs + n;
-			char *dn = NULL;
-
-			fprintf(stderr, "  %2u    %s", n + 1, c->label);
-			if (c->x509)
-				dn = X509_NAME_oneline(X509_get_subject_name
-						       (c->x509), NULL, 0);
-			if (dn) {
-				fprintf(stderr, " (%s)", dn);
-				OPENSSL_free(dn);
-			}
-			fprintf(stderr, "\n");
-		}
-	}
+	scan_certs(certs, cert_count, key_id, key_id_len);
 
 	/* Perform login to the token if required */
 	if (tok->loginRequired) {
