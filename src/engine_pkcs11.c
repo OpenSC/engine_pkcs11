@@ -408,8 +408,17 @@ static int parse_slot_id_string_aux(const char *slot_id,
 				    char **label,
 				    const char *use)
 {
-	int rc = parse_slot_id_string(slot_id, slot_nr,
-				      id, id_len, label);
+	int rc = 1;
+
+	/* Empty / blank slot+id specifier is allowed. */
+	if (!slot_id || slot_id[0] == '\0') {
+		id[0] = '\0';
+		*id_len = 0;
+		return 1;
+	}
+
+	rc = parse_slot_id_string(slot_id, slot_nr,
+				  id, id_len, label);
 
 #undef CLEANUP
 #define CLEANUP cleanup_done
@@ -543,8 +552,7 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (s_slot_cert_id && *s_slot_cert_id &&
-	    !parse_slot_id_string_aux(s_slot_cert_id, &slot_nr,
+	if (!parse_slot_id_string_aux(s_slot_cert_id, &slot_nr,
 				      cert_id, &cert_id_len, &cert_label,
 				      "certificate"))
 		return NULL;
@@ -629,8 +637,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (s_slot_key_id && *s_slot_key_id &&
-	    !parse_slot_id_string_aux(s_slot_key_id, &slot_nr,
+	if (!parse_slot_id_string_aux(s_slot_key_id, &slot_nr,
 				      key_id, &key_id_len, &key_label,
 				      "key"))
 		return NULL;
