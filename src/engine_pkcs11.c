@@ -445,8 +445,12 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 			       PKCS11_SLOT *slot_list,
 			       const int slot_nr)
 {
+	PKCS11_SLOT *rv = NULL;
 	PKCS11_SLOT *found_slot = NULL;
 	int n;
+
+#undef CLEANUP
+#define CLEANUP cleanup_done
 
 	if (verbose)
 		fprintf(stderr, "Num slots: %u\n", slot_count);
@@ -483,7 +487,6 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 				flags[m - 2] = '\0';
 		}
 
-
 		fprintf(stderr, "[%lu] %-25.25s  %-16s",
 			slotid, slot->description, flags);
 
@@ -495,7 +498,28 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 		fprintf(stderr, "\n");
 	}
 
-	return found_slot;
+	/* We didn't find one by looping through obvious slots; see if
+	 * the PKCS11 library can find one "magically". */
+	if (!found_slot)
+		found_slot = PKCS11_find_token(ctx, slot_list, slot_count);
+
+	/* Nothing we can do, communicate failure to caller. */
+	if (!found_slot)
+		FAIL("Unable to find active slot");
+
+	/* Make sure the found slot has a token in it. */
+	if (!found_slot->token)
+		FAIL("No token in selected slot");
+
+	if (verbose)
+		fprintf(stderr, "Found slot '%s', token '%s'\n",
+			found_slot->description, found_slot->token->label);
+
+	/* Success. */
+	rv = found_slot;
+
+cleanup_done:
+	return rv;
 }
 
 #define MAX_VALUE_LEN	200
@@ -505,8 +529,8 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 
 static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 {
-	PKCS11_SLOT *slot_list, *slot;
-	PKCS11_SLOT *found_slot = NULL;
+	PKCS11_SLOT *slot_list;
+	PKCS11_SLOT *slot = NULL;
 	PKCS11_TOKEN *tok;
 	PKCS11_CERT *certs, *selected_cert = NULL;
 	X509 *x509 = NULL;
@@ -531,25 +555,11 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 #undef CLEANUP
 #define CLEANUP cleanup_release_slots
 
-	found_slot = scan_slots(slot_count, slot_list, slot_nr);
+	slot = scan_slots(slot_count, slot_list, slot_nr);
+	if (!slot)
+		FAIL("Unable to find active slot");
 
-	if (slot_nr == -1) {
-		slot = PKCS11_find_token(ctx, slot_list, slot_count);
-		if (!slot)
-			FAIL("Didn't find any tokens");
-	} else if (found_slot) {
-		slot = found_slot;
-	} else {
-		FAIL1("Invalid slot number: %d", slot_nr);
-	}
 	tok = slot->token;
-
-	if (!tok)
-		FAIL("Found empty token");
-
-	if (verbose)
-		fprintf(stderr, "Found slot '%s', token '%s'\n",
-			slot->description, slot->token->label);
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
@@ -604,8 +614,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 				 UI_METHOD *ui_method, void *callback_data,
 				 int isPrivate)
 {
-	PKCS11_SLOT *slot_list, *slot;
-	PKCS11_SLOT *found_slot = NULL;
+	PKCS11_SLOT *slot_list;
+	PKCS11_SLOT *slot = NULL;
 	PKCS11_TOKEN *tok;
 	PKCS11_KEY *keys, *selected_key = NULL;
 	PKCS11_CERT *certs;
@@ -631,31 +641,17 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 #undef CLEANUP
 #define CLEANUP cleanup_release_slots
 
-	found_slot = scan_slots(slot_count, slot_list, slot_nr);
+	slot = scan_slots(slot_count, slot_list, slot_nr);
+	if (!slot)
+		FAIL("Unable to find active slot");
 
-	if (slot_nr == -1) {
-		slot = PKCS11_find_token(ctx, slot_list, slot_count);
-		if (!slot)
-			FAIL("Didn't find any tokens");
-	} else if (found_slot) {
-		slot = found_slot;
-	} else {
-		FAIL1("Invalid slot number: %d", slot_nr);
-	}
 	tok = slot->token;
-
-	if (!tok)
-		FAIL("Found empty token");
-
-	if (isPrivate && !tok->userPinSet && !tok->readOnly)
-		FAIL("Found slot without user PIN");
-
-	if (verbose)
-		fprintf(stderr, "Found slot '%s', token '%s'\n",
-			slot->description, slot->token->label);
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
+
+	if (isPrivate && !tok->userPinSet && !tok->readOnly)
+		FAIL("Found slot without user PIN");
 
 	if (verbose) {
 		fprintf(stderr, "Found %u certificate%s:\n", cert_count,
