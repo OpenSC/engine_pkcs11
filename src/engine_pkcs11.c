@@ -399,6 +399,48 @@ cleanup_done:
 	return 0;
 }
 
+/* a second layer of function call lets the inner call to have
+ * multiple exits gracefully. */
+static int parse_slot_id_string_aux(const char *slot_id,
+				    unsigned int *slot_nr,
+				    unsigned char *id,
+				    size_t *id_len,
+				    char **label,
+				    const char *use)
+{
+	int rc = parse_slot_id_string(slot_id, slot_nr,
+				      id, id_len, label);
+
+#undef CLEANUP
+#define CLEANUP cleanup_done
+
+	if (!rc)
+		FAIL1("could not parse '%s' as slot_id:\n"
+		      "  supported formats: <id>, <slot>:<id>, id_<id>,"
+		      " slot_<slot>-id_<id>, label_<label>,"
+		      " slot_<slot>-label_<label>\n"
+		      "  where <slot> is the slot number as decimal integer,\n"
+		      "  and <id> is the id number as hex nybbles,\n"
+		      "  and <label> is the key label text string.\n",
+		      slot_id);
+
+	if (verbose) {
+		fprintf(stderr, "Looking in slot %d for %s: ", slot_nr, use);
+		if (*label) {
+			fprintf(stderr, "label: '%s'\n", *label);
+		} else {
+			int n;
+			fprintf(stderr, "id(hex): '");
+			for (n = 0; n < *id_len; n++)
+				fprintf(stderr, "%02x", id[n]);
+			fprintf(stderr, "'\n");
+		}
+	}
+
+cleanup_done:
+	return rc;
+}
+
 static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 			       PKCS11_SLOT *slot_list,
 			       const int slot_nr)
@@ -454,48 +496,6 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 	}
 
 	return found_slot;
-}
-
-/* a second layer of function call lets the inner call to have
- * multiple exits gracefully. */
-static int parse_slot_id_string_aux(const char *slot_id,
-				    unsigned int *slot_nr,
-				    unsigned char *id,
-				    size_t *id_len,
-				    char **label,
-				    const char *use)
-{
-	int rc = parse_slot_id_string(slot_id, slot_nr,
-				      id, id_len, label);
-
-#undef CLEANUP
-#define CLEANUP cleanup_done
-
-	if (!rc)
-		FAIL1("could not parse '%s' as slot_id:\n"
-		      "  supported formats: <id>, <slot>:<id>, id_<id>,"
-		      " slot_<slot>-id_<id>, label_<label>,"
-		      " slot_<slot>-label_<label>\n"
-		      "  where <slot> is the slot number as decimal integer,\n"
-		      "  and <id> is the id number as hex nybbles,\n"
-		      "  and <label> is the key label text string.\n",
-		      slot_id);
-
-	if (verbose) {
-		fprintf(stderr, "Looking in slot %d for %s: ", slot_nr, use);
-		if (*label) {
-			fprintf(stderr, "label: '%s'\n", *label);
-		} else {
-			int n;
-			fprintf(stderr, "id(hex): '");
-			for (n = 0; n < *id_len; n++)
-				fprintf(stderr, "%02x", id[n]);
-			fprintf(stderr, "'\n");
-		}
-	}
-
-cleanup_done:
-	return rc;
 }
 
 #define MAX_VALUE_LEN	200
