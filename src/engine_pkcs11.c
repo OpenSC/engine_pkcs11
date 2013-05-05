@@ -411,7 +411,6 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 
 	for (n = 0; n < slot_count; n++) {
 		char flags[64];
-		int m;
 		PKCS11_SLOT *slot = slot_list + n;
 		unsigned long slotid = PKCS11_get_slotid_from_slot(slot);
 		if (slot_nr != -1 && slot_nr == slotid)
@@ -426,21 +425,22 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 
 		flags[0] = '\0';
 		if (!slot->token) {
-			strcpy(flags, "no token, ");
+			strcpy(flags, "no token");
 		} else if (!slot->token->initialized) {
-			strcat(flags, "uninitialized, ");
+			strcat(flags, "uninitialized");
 		} else {
+			int m;
 			if (!slot->token->userPinSet)
 				strcat(flags, "no pin, ");
 			if (slot->token->loginRequired)
 				strcat(flags, "login, ");
 			if (slot->token->readOnly)
 				strcat(flags, "ro, ");
+			m = strlen(flags);
+			if (m)
+				flags[m - 2] = '\0';
 		}
 
-		m = strlen(flags);
-		if (m)
-			flags[m - 2] = '\0';
 
 		fprintf(stderr, "[%lu] %-25.25s  %-16s",
 			slotid, slot->description, flags);
