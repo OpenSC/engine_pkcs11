@@ -762,7 +762,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 			(key_count <= 1) ? "" : "s");
 
 	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label)) {
-		for (n = 0; !selected_key && n < key_count; n++) {
+		for (n = 0; n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
 
 			if (verbose)
@@ -770,14 +770,27 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 					k->isPrivate ? 'P' : ' ',
 					k->needLogin ? 'L' : ' ', k->label);
 
-			if (!key_label) {
-				if (key_id_len != 0 && k->id_len == key_id_len
-				    && memcmp(k->id, key_id, key_id_len) == 0) {
-					selected_key = k;
-				}
-			} else {
+			/* It would be nice to just break once we
+			 * found the requested key, but the original
+			 * code dumped all key info regardless, so we
+			 * maintain compatibility. */
+			if (selected_key)
+				continue;
+
+			/* If a label is specified, it must be a
+			 * string match. */
+			if (key_label) {
 				if (strcmp(k->label, key_label) == 0)
 					selected_key = k;
+				continue;
+			}
+
+			/* Otherwise, if an id was specified, it
+			 * must be a binary match of exactly the same
+			 * length. */
+			if (key_id_len != 0 && key_id_len == k->id_len &&
+			    memcmp(k->id, key_id, key_id_len) == 0) {
+				selected_key = k;
 			}
 		}
 	} else {
