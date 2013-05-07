@@ -443,18 +443,6 @@ cleanup_done:
 	return 0;
 }
 
-int pkcs11_rsa_finish(RSA *rsa)
-{
-	zero_pin();
-	if (module) {
-		free(module);
-		module = NULL;
-	}
-	/* need to free RSA_ex_data? */
-	/* FIXME: ajf -- need to PKCS11_CTX_free(ctx)? */
-	return 1;
-}
-
 static int hex_to_bin(const char *in, unsigned char *out, size_t *outlen)
 {
 	size_t left, count = 0;
