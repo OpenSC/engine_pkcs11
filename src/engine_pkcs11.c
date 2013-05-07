@@ -681,7 +681,7 @@ cleanup_done:
 }
 
 static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
-			       PKCS11_SLOT *slot_list,
+			       PKCS11_SLOT *slots,
 			       const int slot_nr)
 {
 	PKCS11_SLOT *rv = NULL;
@@ -695,7 +695,7 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 
 	for (n = 0; n < slot_count; n++) {
 		char flags[64];
-		PKCS11_SLOT *slot = slot_list + n;
+		PKCS11_SLOT *slot = slots + n;
 		unsigned long slotid = PKCS11_get_slotid_from_slot(slot);
 		if (slot_nr != -1 && slot_nr == slotid)
 			found_slot = slot;
@@ -739,7 +739,7 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 	/* We didn't find one by looping through obvious slots; see if
 	 * the PKCS11 library can find one "magically". */
 	if (!found_slot)
-		found_slot = PKCS11_find_token(ctx, slot_list, slot_count);
+		found_slot = PKCS11_find_token(ctx, slots, slot_count);
 
 	/* Nothing we can do, communicate failure to caller. */
 	if (!found_slot)
@@ -819,7 +819,7 @@ PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
 
 static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 {
-	PKCS11_SLOT *slot_list;
+	PKCS11_SLOT *slots;
 	PKCS11_SLOT *slot = NULL;
 	PKCS11_TOKEN *token;
 	PKCS11_CERT *certs, *selected_cert = NULL;
@@ -838,13 +838,13 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 				      "certificate"))
 		return NULL;
 
-	if (PKCS11_enumerate_slots(ctx, &slot_list, &slot_count) < 0)
+	if (PKCS11_enumerate_slots(ctx, &slots, &slot_count) < 0)
 		FAIL("Failed to enumerate slots");
 
 #undef CLEANUP
 #define CLEANUP cleanup_release_slots
 
-	slot = scan_slots(slot_count, slot_list, slot_nr);
+	slot = scan_slots(slot_count, slots, slot_nr);
 	if (!slot)
 		FAIL("Unable to find active slot");
 
@@ -867,7 +867,7 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 		free(cert_label);
 
 cleanup_release_slots:
-	PKCS11_release_all_slots(ctx, slot_list, slot_count);
+	PKCS11_release_all_slots(ctx, slots, slot_count);
 
 cleanup_done:
 	return x509;
@@ -891,7 +891,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 				 UI_METHOD *ui_method, void *callback_data,
 				 int isPrivate)
 {
-	PKCS11_SLOT *slot_list;
+	PKCS11_SLOT *slots;
 	PKCS11_SLOT *slot = NULL;
 	PKCS11_TOKEN *token;
 	PKCS11_KEY *keys, *selected_key = NULL;
@@ -911,13 +911,13 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 				      "key"))
 		return NULL;
 
-	if (PKCS11_enumerate_slots(ctx, &slot_list, &slot_count) < 0)
+	if (PKCS11_enumerate_slots(ctx, &slots, &slot_count) < 0)
 		FAIL("Failed to enumerate slots");
 
 #undef CLEANUP
 #define CLEANUP cleanup_release_slots
 
-	slot = scan_slots(slot_count, slot_list, slot_nr);
+	slot = scan_slots(slot_count, slots, slot_nr);
 	if (!slot)
 		FAIL("Unable to find active slot");
 
@@ -1035,7 +1035,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 
 	/* Save the enumerated slots so we can release them later. */
 	if (pk)
-		add_key_ext_info(pk, slot_list, slot_count);
+		add_key_ext_info(pk, slots, slot_count);
 
 cleanup_done:
 	if (key_label)
@@ -1045,7 +1045,7 @@ cleanup_done:
 	return pk;
 
 cleanup_release_slots:
-	PKCS11_release_all_slots(ctx, slot_list, slot_count);
+	PKCS11_release_all_slots(ctx, slots, slot_count);
 	return NULL;
 }
 
