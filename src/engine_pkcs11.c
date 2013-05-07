@@ -761,10 +761,10 @@ cleanup_done:
 
 PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
 			unsigned int cert_count,
-			char * id,
+			char *id,
 			unsigned int id_len)
 {
-	PKCS11_CERT * rv = NULL;
+	PKCS11_CERT *rv = NULL;
 	unsigned int n;
 	unsigned int cert_num = 0;
 
