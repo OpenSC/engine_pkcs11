@@ -27,6 +27,8 @@
 
 #include <config.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 #include <openssl/crypto.h>
 #include <openssl/objects.h>
@@ -393,6 +395,19 @@ int pkcs11_finish(ENGINE *engine)
 
 int pkcs11_init(ENGINE *engine)
 {
+	static const char *env_name = "ENGINE_PKCS11_VERBOSE";
+	const char *env_val = getenv(env_name);
+	if (env_val) {
+		char *end;
+		long tmp = strtol(env_val, &end, 10);
+		if (end != env_val && INT_MIN <= tmp && tmp <= INT_MAX)
+			verbose = (int)tmp;
+		else
+			fprintf(stderr, "%s:%s: invalid %s '%s'\n",
+				"engine_pkcs11", __func__,
+				env_name, env_val);
+	}
+
 	VERBOSE("Initializing engine");
 
 #undef CLEANUP
