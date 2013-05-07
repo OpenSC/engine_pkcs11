@@ -821,7 +821,7 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 {
 	PKCS11_SLOT *slot_list;
 	PKCS11_SLOT *slot = NULL;
-	PKCS11_TOKEN *tok;
+	PKCS11_TOKEN *token;
 	PKCS11_CERT *certs, *selected_cert = NULL;
 	X509 *x509 = NULL;
 	unsigned int slot_count, cert_count, n;
@@ -848,11 +848,11 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 	if (!slot)
 		FAIL("Unable to find active slot");
 
-	tok = slot->token;
-	if (!tok)
+	token = slot->token;
+	if (!token)
 		FAIL("No token in active slot");
 
-	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
+	if (PKCS11_enumerate_certs(token, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
 
 	selected_cert = scan_certs(certs, cert_count,
@@ -893,7 +893,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 {
 	PKCS11_SLOT *slot_list;
 	PKCS11_SLOT *slot = NULL;
-	PKCS11_TOKEN *tok;
+	PKCS11_TOKEN *token;
 	PKCS11_KEY *keys, *selected_key = NULL;
 	PKCS11_CERT *certs;
 	EVP_PKEY *pk = NULL;
@@ -921,24 +921,24 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	if (!slot)
 		FAIL("Unable to find active slot");
 
-	tok = slot->token;
-	if (!tok)
+	token = slot->token;
+	if (!token)
 		FAIL("No token in active slot");
 
-	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
+	if (PKCS11_enumerate_certs(token, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
 
-	if (isPrivate && !tok->userPinSet && !tok->readOnly)
+	if (isPrivate && !token->userPinSet && !token->readOnly)
 		FAIL("Found slot without user PIN");
 
 	scan_certs(certs, cert_count, key_id, key_id_len);
 
 	/* Perform login to the token if required */
-	if (tok->loginRequired) {
+	if (token->loginRequired) {
 		/* If the token has a secure login (i.e., an external keypad),
 		   then use a NULL pin. Otherwise, check if a PIN exists. If
 		   not, allocate and obtain a new PIN. */
-		if (tok->secureLogin) {
+		if (token->secureLogin) {
 			/* Free the PIN if it has already been
 			   assigned (i.e, cached by get_pin) */
 			zero_pin();
@@ -977,7 +977,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	}
 
 	/* Make sure there is at least one private key on the token */
-	if (PKCS11_enumerate_keys(tok, &keys, &key_count))
+	if (PKCS11_enumerate_keys(token, &keys, &key_count))
 		FAIL("Unable to enumerate keys");
 
 	if (key_count == 0)
