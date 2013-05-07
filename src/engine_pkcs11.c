@@ -822,7 +822,8 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *slot_id)
 	PKCS11_SLOT *slots;
 	PKCS11_SLOT *slot = NULL;
 	PKCS11_TOKEN *token;
-	PKCS11_CERT *certs, *selected_cert = NULL;
+	PKCS11_CERT *certs;
+	PKCS11_CERT *cert = NULL;
 	X509 *x509 = NULL;
 	unsigned int slot_count, cert_count;
 	unsigned char cert_id[MAX_VALUE_LEN / 2];
@@ -854,13 +855,12 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *slot_id)
 	if (PKCS11_enumerate_certs(token, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
 
-	selected_cert = scan_certs(certs, cert_count,
-				   cert_id, cert_id_len);
+	cert = scan_certs(certs, cert_count, cert_id, cert_id_len);
 
-	if (!selected_cert)
+	if (!cert)
 		FAIL("Certificate not found.");
 
-	x509 = X509_dup(selected_cert->x509);
+	x509 = X509_dup(cert->x509);
 
 	if (cert_label)
 		free(cert_label);
@@ -893,7 +893,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 	PKCS11_SLOT *slots;
 	PKCS11_SLOT *slot = NULL;
 	PKCS11_TOKEN *token;
-	PKCS11_KEY *keys, *selected_key = NULL;
+	PKCS11_KEY *keys;
+	PKCS11_KEY *key = NULL;
 	PKCS11_CERT *certs;
 	EVP_PKEY *pk = NULL;
 	unsigned int slot_count, cert_count, key_count;
@@ -997,14 +998,14 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 			 * found the requested key, but the original
 			 * code dumped all key info regardless, so we
 			 * maintain compatibility. */
-			if (selected_key)
+			if (key)
 				continue;
 
 			/* If a label is specified, it must be a
 			 * string match. */
 			if (key_label) {
 				if (strcmp(k->label, key_label) == 0)
-					selected_key = k;
+					key = k;
 				continue;
 			}
 
@@ -1013,22 +1014,22 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 			 * length. */
 			if (key_id_len != 0 && key_id_len == k->id_len &&
 			    memcmp(k->id, key_id, key_id_len) == 0) {
-				selected_key = k;
+				key = k;
 			}
 		}
 	} else {
-		selected_key = keys;	/* use first */
+		key = keys; /* use first */
 	}
 
-	if (!selected_key)
+	if (!key)
 		FAIL("Key not found");
 
 	if (isPrivate) {
-		pk = PKCS11_get_private_key(selected_key);
+		pk = PKCS11_get_private_key(key);
 	} else {
 		/* pk = PKCS11_get_public_key(&keys[0]);
 		   need a get_public_key? */
-		pk = PKCS11_get_private_key(selected_key);
+		pk = PKCS11_get_private_key(key);
 	}
 
 	/* Save the enumerated slots so we can release them later. */
