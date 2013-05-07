@@ -849,6 +849,8 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 		FAIL("Unable to find active slot");
 
 	tok = slot->token;
+	if (!tok)
+		FAIL("No token in active slot");
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
@@ -920,6 +922,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 		FAIL("Unable to find active slot");
 
 	tok = slot->token;
+	if (!tok)
+		FAIL("No token in active slot");
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
