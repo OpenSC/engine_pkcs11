@@ -888,7 +888,7 @@ int load_cert_ctrl(ENGINE *e, void *p)
 
 static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 				 UI_METHOD *ui_method, void *callback_data,
-				 int isPrivate)
+				 int is_private)
 {
 	PKCS11_SLOT *slots;
 	PKCS11_SLOT *slot = NULL;
@@ -927,7 +927,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 	if (PKCS11_enumerate_certs(token, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
 
-	if (isPrivate && !token->userPinSet && !token->readOnly)
+	if (is_private && !token->userPinSet && !token->readOnly)
 		FAIL("Found slot without user PIN");
 
 	scan_certs(certs, cert_count, key_id, key_id_len);
@@ -1024,7 +1024,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 	if (!key)
 		FAIL("Key not found");
 
-	if (isPrivate) {
+	if (is_private) {
 		pk = PKCS11_get_private_key(key);
 	} else {
 		/* pk = PKCS11_get_public_key(&keys[0]);
