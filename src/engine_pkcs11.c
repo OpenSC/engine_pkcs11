@@ -824,7 +824,7 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 	PKCS11_TOKEN *token;
 	PKCS11_CERT *certs, *selected_cert = NULL;
 	X509 *x509 = NULL;
-	unsigned int slot_count, cert_count, n;
+	unsigned int slot_count, cert_count;
 	unsigned char cert_id[MAX_VALUE_LEN / 2];
 	size_t cert_id_len = sizeof(cert_id);
 	char *cert_label = NULL;
@@ -897,7 +897,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	PKCS11_KEY *keys, *selected_key = NULL;
 	PKCS11_CERT *certs;
 	EVP_PKEY *pk = NULL;
-	unsigned int slot_count, cert_count, key_count, n;
+	unsigned int slot_count, cert_count, key_count;
 	unsigned char key_id[MAX_VALUE_LEN / 2];
 	size_t key_id_len = sizeof(key_id);
 	char *key_label = NULL;
@@ -986,6 +986,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	VERBOSE2("Found %u key%s:", key_count, PLURAL_OF(key_count));
 
 	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label)) {
+		unsigned int n;
 		for (n = 0; n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
 
