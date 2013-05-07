@@ -75,7 +75,7 @@
 
 static PKCS11_CTX *ctx;
 
-/**
+/*
  * The PIN used for login. Cache for the get_pin function.
  * The memory for this PIN is always owned internally,
  * and may be freed as necessary. Before freeing, the PIN
@@ -101,7 +101,7 @@ static char *module;
 
 static char *init_args;
 
-/**
+/*
  * Store extra information associated with a particular EVP_PKEY *.
  *
  * In the process of generating an EVP_PKEY, we have to enumerate all
@@ -236,26 +236,6 @@ static int del_key_ext_info(EVP_PKEY *evp_pkey,
 	return 0;
 }
 
-/**
- * Frees @pkey and releases any associated resources.
- *
- * Always returns non-zero success.
- */
-int release_key(EVP_PKEY *evp_pkey)
-{
-	PKCS11_SLOT *slots;
-	unsigned int slot_count;
-
-	VERBOSE2("evp_pkey=%p, count=%d\n", evp_pkey, key_ext_count);
-
-	if (del_key_ext_info(evp_pkey, &slots, &slot_count))
-		PKCS11_release_all_slots(ctx, slots, slot_count);
-
-	VERBOSE1("  Done, count=%d\n", key_ext_count);
-
-	return 1;
-}
-
 /*
  * Free up all remaining key info and the key info structure
  * itself.
@@ -276,48 +256,6 @@ static void finalize_key_ext_info()
 	key_exts = NULL;
 
 	VERBOSE("  Done");
-}
-
-int set_module(const char *modulename)
-{
-	module = modulename ? strdup(modulename) : NULL;
-	return 1;
-}
-
-/**
- * Set the PIN used for login. A copy of the PIN shall be made.
- *
- * If the PIN cannot be assigned, the value 0 shall be returned
- * and errno shall be set as follows:
- *
- *   EINVAL - a NULL PIN was supplied
- *   ENOMEM - insufficient memory to copy the PIN
- *
- * @param _pin the pin to use for login. Must not be NULL.
- *
- * @return 1 on success, 0 on failure.
- */
-int set_pin(const char *_pin)
-{
-	/* Pre-condition check */
-	if (!_pin) {
-		errno = EINVAL;
-		return 0;
-	}
-
-	/* Copy the PIN. If the string cannot be copied, NULL
-	   shall be returned and errno shall be set. */
-	pin = strdup(_pin);
-	if (pin)
-		pin_length = strlen(pin);
-
-	return !!pin;
-}
-
-int inc_verbose(void)
-{
-	verbose++;
-	return 1;
 }
 
 /* either get the pin code from the supplied callback data, or get the pin
@@ -373,74 +311,6 @@ cleanup_release_ui:
 
 cleanup_done:
 	return rv;
-}
-
-int set_init_args(const char *init_args_orig)
-{
-	init_args = init_args_orig ? strdup(init_args_orig) : NULL;
-	return 1;
-}
-
-int pkcs11_finish(ENGINE *engine)
-{
-	finalize_key_ext_info();
-	if (ctx) {
-		PKCS11_CTX_unload(ctx);
-		PKCS11_CTX_free(ctx);
-		ctx = NULL;
-	}
-	zero_pin();
-	return 1;
-}
-
-int pkcs11_init(ENGINE *engine)
-{
-	static const char *env_name = "ENGINE_PKCS11_VERBOSE";
-	const char *env_val = getenv(env_name);
-	if (env_val) {
-		char *end;
-		long tmp = strtol(env_val, &end, 10);
-		if (end != env_val && INT_MIN <= tmp && tmp <= INT_MAX)
-			verbose = (int)tmp;
-		else
-			fprintf(stderr, "%s:%s: invalid %s '%s'\n",
-				"engine_pkcs11", __func__,
-				env_name, env_val);
-	}
-
-	VERBOSE("Initializing engine");
-
-#undef CLEANUP
-#define CLEANUP cleanup_done
-
-	if (!initialize_key_ext_info())
-		FAIL("Unable to initialize key_ext info");
-
-#undef CLEANUP
-#define CLEANUP cleanup_key_ext
-
-	ctx = PKCS11_CTX_new();
-	if (!ctx)
-		FAIL("Unable to allocate PKCS11_CTX");
-
-#undef CLEANUP
-#define CLEANUP cleanup_release_ctx
-
-	PKCS11_CTX_init_args(ctx, init_args);
-	if (PKCS11_CTX_load(ctx, module) < 0)
-		FAIL1("Unable to load module '%s'", module);
-
-	/* in case of success, we don't want to deallocate anything. */
-	return 1;
-
-cleanup_release_ctx:
-	PKCS11_CTX_free(ctx);
-
-cleanup_key_ext:
-	finalize_key_ext_info();
-
-cleanup_done:
-	return 0;
 }
 
 static int hex_to_bin(const char *in, unsigned char *out, size_t *outlen)
@@ -860,20 +730,6 @@ cleanup_done:
 	return x509;
 }
 
-int load_cert_ctrl(ENGINE *e, void *p)
-{
-	struct {
-		const char *slot_id;
-		X509 *cert;
-	} *parms = p;
-
-	if (parms->cert)
-		return 0;
-
-	parms->cert = pkcs11_load_cert(e, parms->slot_id);
-	return !!parms->cert;
-}
-
 static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 				 UI_METHOD *ui_method, void *callback_data,
 				 int is_private)
@@ -1036,6 +892,135 @@ cleanup_release_slots:
 	return NULL;
 }
 
+/* =================================================================== */
+/* methods exported to the engine interface.                           */
+
+int set_module(const char *modulename)
+{
+	module = modulename ? strdup(modulename) : NULL;
+	return 1;
+}
+
+int set_pin(const char *_pin)
+{
+	/* Pre-condition check */
+	if (!_pin) {
+		errno = EINVAL;
+		return 0;
+	}
+
+	/* Copy the PIN. If the string cannot be copied, NULL
+	   shall be returned and errno shall be set. */
+	pin = strdup(_pin);
+	if (pin)
+		pin_length = strlen(pin);
+
+	return !!pin;
+}
+
+int set_init_args(const char *init_args_orig)
+{
+	init_args = init_args_orig ? strdup(init_args_orig) : NULL;
+	return 1;
+}
+
+int pkcs11_init(ENGINE *engine)
+{
+	static const char *env_name = "ENGINE_PKCS11_VERBOSE";
+	const char *env_val = getenv(env_name);
+	if (env_val) {
+		char *end;
+		long tmp = strtol(env_val, &end, 10);
+		if (end != env_val && INT_MIN <= tmp && tmp <= INT_MAX)
+			verbose = (int)tmp;
+		else
+			fprintf(stderr, "%s:%s: invalid %s '%s'\n",
+				"engine_pkcs11", __func__,
+				env_name, env_val);
+	}
+
+	VERBOSE("Initializing engine");
+
+#undef CLEANUP
+#define CLEANUP cleanup_done
+
+	if (!initialize_key_ext_info())
+		FAIL("Unable to initialize key_ext info");
+
+#undef CLEANUP
+#define CLEANUP cleanup_key_ext
+
+	ctx = PKCS11_CTX_new();
+	if (!ctx)
+		FAIL("Unable to allocate PKCS11_CTX");
+
+#undef CLEANUP
+#define CLEANUP cleanup_release_ctx
+
+	PKCS11_CTX_init_args(ctx, init_args);
+	if (PKCS11_CTX_load(ctx, module) < 0)
+		FAIL1("Unable to load module '%s'", module);
+
+	/* in case of success, we don't want to deallocate anything. */
+	return 1;
+
+cleanup_release_ctx:
+	PKCS11_CTX_free(ctx);
+
+cleanup_key_ext:
+	finalize_key_ext_info();
+
+cleanup_done:
+	return 0;
+}
+
+int pkcs11_finish(ENGINE *engine)
+{
+	finalize_key_ext_info();
+	if (ctx) {
+		PKCS11_CTX_unload(ctx);
+		PKCS11_CTX_free(ctx);
+		ctx = NULL;
+	}
+	zero_pin();
+	return 1;
+}
+
+int load_cert_ctrl(ENGINE *e, void *p)
+{
+	struct {
+		const char *slot_id;
+		X509 *cert;
+	} *parms = p;
+
+	if (parms->cert)
+		return 0;
+
+	parms->cert = pkcs11_load_cert(e, parms->slot_id);
+	return !!parms->cert;
+}
+
+int release_key(EVP_PKEY *evp_pkey)
+{
+	PKCS11_SLOT *slots;
+	unsigned int slot_count;
+
+	VERBOSE2("evp_pkey=%p, count=%d\n", evp_pkey, key_ext_count);
+
+	if (del_key_ext_info(evp_pkey, &slots, &slot_count))
+		PKCS11_release_all_slots(ctx, slots, slot_count);
+
+	VERBOSE1("  Done, count=%d\n", key_ext_count);
+
+	return 1;
+}
+
+int inc_verbose(void)
+{
+	verbose++;
+	return 1;
+}
+
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
@@ -1064,3 +1049,4 @@ EVP_PKEY *pkcs11_load_private_key(ENGINE *e, const char *slot_id,
 cleanup_done:
 	return pk;
 }
+
