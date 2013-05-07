@@ -817,7 +817,7 @@ PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
 /* prototype for OpenSSL ENGINE_load_cert */
 /* used by load_cert_ctrl via ENGINE_ctrl for now */
 
-static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
+static X509 *pkcs11_load_cert(ENGINE *e, const char *slot_id)
 {
 	PKCS11_SLOT *slots;
 	PKCS11_SLOT *slot = NULL;
@@ -833,9 +833,8 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (!parse_slot_id_string_aux(s_slot_cert_id, &slot_nr,
-				      cert_id, &cert_id_len, &cert_label,
-				      "certificate"))
+	if (!parse_slot_id_string_aux(slot_id, &slot_nr, cert_id, &cert_id_len,
+				      &cert_label, "certificate"))
 		return NULL;
 
 	if (PKCS11_enumerate_slots(ctx, &slots, &slot_count) < 0)
@@ -876,18 +875,18 @@ cleanup_done:
 int load_cert_ctrl(ENGINE *e, void *p)
 {
 	struct {
-		const char *s_slot_cert_id;
+		const char *slot_id;
 		X509 *cert;
 	} *parms = p;
 
 	if (parms->cert)
 		return 0;
 
-	parms->cert = pkcs11_load_cert(e, parms->s_slot_cert_id);
+	parms->cert = pkcs11_load_cert(e, parms->slot_id);
 	return !!parms->cert;
 }
 
-static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
+static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *slot_id,
 				 UI_METHOD *ui_method, void *callback_data,
 				 int isPrivate)
 {
@@ -906,9 +905,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (!parse_slot_id_string_aux(s_slot_key_id, &slot_nr,
-				      key_id, &key_id_len, &key_label,
-				      "key"))
+	if (!parse_slot_id_string_aux(slot_id, &slot_nr, key_id, &key_id_len,
+				      &key_label, "key"))
 		return NULL;
 
 	if (PKCS11_enumerate_slots(ctx, &slots, &slot_count) < 0)
@@ -985,7 +983,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 
 	VERBOSE2("Found %u key%s:", key_count, PLURAL_OF(key_count));
 
-	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label)) {
+	if (slot_id && *slot_id && (key_id_len != 0 || key_label)) {
 		unsigned int n;
 		for (n = 0; n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
@@ -1052,12 +1050,12 @@ cleanup_release_slots:
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-EVP_PKEY *pkcs11_load_public_key(ENGINE *e, const char *s_key_id,
+EVP_PKEY *pkcs11_load_public_key(ENGINE *e, const char *slot_id,
 				 UI_METHOD *ui_method, void *callback_data)
 {
 	EVP_PKEY *pk = NULL;
 
-	pk = pkcs11_load_key(e, s_key_id, ui_method, callback_data, 0);
+	pk = pkcs11_load_key(e, slot_id, ui_method, callback_data, 0);
 	if (!pk)
 		FAIL("PKCS11_load_public_key returned NULL");
 
@@ -1065,12 +1063,12 @@ cleanup_done:
 	return pk;
 }
 
-EVP_PKEY *pkcs11_load_private_key(ENGINE *e, const char *s_key_id,
+EVP_PKEY *pkcs11_load_private_key(ENGINE *e, const char *slot_id,
 				  UI_METHOD *ui_method, void *callback_data)
 {
 	EVP_PKEY *pk;
 
-	pk = pkcs11_load_key(e, s_key_id, ui_method, callback_data, 1);
+	pk = pkcs11_load_key(e, slot_id, ui_method, callback_data, 1);
 	if (!pk)
 		FAIL("PKCS11_load_public_key returned NULL");
 
