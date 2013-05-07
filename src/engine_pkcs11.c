@@ -39,6 +39,35 @@
 #define strncasecmp strnicmp
 #endif
 
+#define VERBOSE(fmt)							\
+	do {								\
+		if (verbose) {						\
+			fprintf(stderr, "%s: " fmt "\n",		\
+				__func__);				\
+		}							\
+	}								\
+	while (0)
+
+#define VERBOSE1(fmt, arg1)						\
+	do {								\
+		if (verbose) {						\
+			fprintf(stderr, "%s: " fmt "\n",		\
+				__func__, arg1);			\
+		}							\
+	}								\
+	while (0)
+
+#define VERBOSE2(fmt, arg1, arg2)					\
+	do {								\
+		if (verbose) {						\
+			fprintf(stderr, "%s: " fmt "\n",		\
+				__func__, arg1, arg2);			\
+		}							\
+	}								\
+	while (0)
+
+#define PLURAL_OF(count) ((count == 1) ? "" : "s")
+
 /** The maximum length of an internally-allocated PIN */
 #define MAX_PIN_LENGTH 32
 
@@ -102,7 +131,7 @@ int key_ext_alloc;
 /* Allocate initial storage for extra data for keys. */
 static int initialize_key_ext_info()
 {
-	fprintf(stderr, "%s: starting\n", __func__);
+	VERBOSE("Starting");
 
 	/* (Yes, malloc+memset is calloc, but doing it this way keeps
 	 * it consistent with the extension case.) */
@@ -113,7 +142,7 @@ static int initialize_key_ext_info()
 	memset(key_exts, 0, new_alloc*sizeof(struct pkcs11_key_ext));
 	key_ext_alloc = 10;
 
-	fprintf(stderr, "%s: success\n", __func__);
+	VERBOSE("Success");
 
 	return 1;
 }
@@ -127,12 +156,11 @@ static int add_key_ext_info(EVP_PKEY *evp_pkey,
 			    PKCS11_SLOT *slots,
 			    unsigned int slot_count)
 {
-	fprintf(stderr, "%s: evp_pkey=%p, count=%d\n", __func__,
-		evp_pkey, key_ext_count);
+	VERBOSE2("evp_pkey=%p, count=%d", evp_pkey, key_ext_count);
 
 	/* If we have used all allocated storage, allocate more. */
 	if (key_ext_count >= key_ext_alloc) {
-		fprintf(stderr, "%s:   reallocating\n", __func__);
+		VERBOSE("  Reallocating");
 		int new_alloc = 2*key_ext_alloc;
 		struct pkcs11_key_ext *new_key_exts =
 			realloc(key_exts,
@@ -154,7 +182,7 @@ static int add_key_ext_info(EVP_PKEY *evp_pkey,
 	/* Mark it as used. */
 	++key_ext_count;
 
-	fprintf(stderr, "%s:   count=%d\n", __func__, key_ext_count);
+	VERBOSE1("  count=%d", key_ext_count);
 
 	return 1;
 }
@@ -168,7 +196,7 @@ static int del_key_ext_info(EVP_PKEY *evp_pkey,
 			    PKCS11_SLOT **slots,
 			    unsigned int *slot_count)
 {
-	fprintf(stderr, "%s: evp_pkey=%p\n", __func__, evp_pkey);
+	VERBOSE1("evp_pkey=%p", evp_pkey);
 
 	int i;
 	for (i = 0; i < key_ext_count; ++i) {
@@ -176,13 +204,11 @@ static int del_key_ext_info(EVP_PKEY *evp_pkey,
 
 		/* Examine the key_ext at index i. */
 		struct pkcs11_key_ext *key_ext = key_exts+i;
-		fprintf(stderr, "%s:   i=%d, evp_pkey=%p\n", __func__,
-			i, key_ext->evp_pkey);
+		VERBOSE2("  i=%d, evp_pkey=%p", i, key_ext->evp_pkey);
 		if (key_ext->evp_pkey != evp_pkey)
 			continue;
 
-		fprintf(stderr, "%s:   found, slots=%p\n", __func__,
-			key_ext->slots);
+		VERBOSE1("  Found, slots=%p", key_ext->slots);
 
 		/* Found a matching key; copy values. */
 		*slots      = key_ext->slots;
@@ -199,12 +225,12 @@ static int del_key_ext_info(EVP_PKEY *evp_pkey,
 		       sizeof(struct pkcs11_key_ext));
 		key_ext_count = prev_last;
 
-		fprintf(stderr, "%s:   removed, count=%d\n", __func__, key_ext_count);
+		VERBOSE1("  Removed, count=%d", key_ext_count);
 
 		return 1;
 	}
 
-	fprintf(stderr, "%s:   not found, count=%d\n", __func__, key_ext_count);
+	VERBOSE1("  Not found, count=%d", key_ext_count);
 	return 0;
 }
 
@@ -218,13 +244,12 @@ int release_key(EVP_PKEY *evp_pkey)
 	PKCS11_SLOT *slots;
 	unsigned int slot_count;
 
-	fprintf(stderr, "%s: evp_pkey=%p, count=%d\n", __func__,
-		evp_pkey, key_ext_count);
+	VERBOSE2("evp_pkey=%p, count=%d\n", evp_pkey, key_ext_count);
 
 	if (del_key_ext_info(evp_pkey, &slots, &slot_count))
 		PKCS11_release_all_slots(ctx, slots, slot_count);
 
-	fprintf(stderr, "%s:   done, count=%d\n", __func__, key_ext_count);
+	VERBOSE1("  Done, count=%d\n", key_ext_count);
 
 	return 1;
 }
@@ -235,7 +260,7 @@ int release_key(EVP_PKEY *evp_pkey)
  */
 static void finalize_key_ext_info()
 {
-	fprintf(stderr, "%s\n", __func__);
+	VERBOSE("Starting");
 
 	/* Release everything left in the array.  Note that
 	 * key_ext_count is decremented within the
@@ -247,6 +272,8 @@ static void finalize_key_ext_info()
 	/* And then release the array itself. */
 	free(key_exts);
 	key_exts = NULL;
+
+	VERBOSE("  Done");
 }
 
 int set_module(const char *modulename)
@@ -366,8 +393,7 @@ int pkcs11_finish(ENGINE *engine)
 
 int pkcs11_init(ENGINE *engine)
 {
-	if (verbose)
-		fprintf(stderr, "initializing engine\n");
+	VERBOSE("Initializing engine");
 
 #undef CLEANUP
 #define CLEANUP cleanup_done
@@ -650,8 +676,7 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
-	if (verbose)
-		fprintf(stderr, "Num slots: %u\n", slot_count);
+	VERBOSE1("Num slots: %u\n", slot_count);
 
 	for (n = 0; n < slot_count; n++) {
 		char flags[64];
@@ -709,9 +734,8 @@ static PKCS11_SLOT *scan_slots(const unsigned int slot_count,
 	if (!found_slot->token)
 		FAIL("No token in selected slot");
 
-	if (verbose)
-		fprintf(stderr, "Found slot '%s', token '%s'\n",
-			found_slot->description, found_slot->token->label);
+	VERBOSE2("Found slot '%s', token '%s'",
+		 found_slot->description, found_slot->token->label);
 
 	/* Success. */
 	rv = found_slot;
@@ -729,9 +753,7 @@ PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
 	unsigned int n;
 	unsigned int cert_num = 0;
 
-	if (verbose)
-		fprintf(stderr, "Found %u certificate%s:\n",
-			cert_count, (cert_count <= 1) ? "" : "s");
+	VERBOSE2("Found %u certificate%s:", cert_count, PLURAL_OF(cert_count));
 
 	for (n = 0; n < cert_count; n++) {
 		PKCS11_CERT *c = certs + n;
@@ -815,10 +837,6 @@ static X509 *pkcs11_load_cert(ENGINE *e, const char *s_slot_cert_id)
 
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count))
 		FAIL("Unable to enumerate certificates");
-
-	if (verbose)
-		fprintf(stderr, "Found %u cert%s:\n", cert_count,
-			(cert_count <= 1) ? "" : "s");
 
 	selected_cert = scan_certs(certs, cert_count,
 				   cert_id, cert_id_len);
@@ -946,9 +964,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 	if (key_count == 0)
 		FAIL("No keys found.");
 
-	if (verbose)
-		fprintf(stderr, "Found %u key%s:\n", key_count,
-			(key_count <= 1) ? "" : "s");
+	VERBOSE2("Found %u key%s:", key_count, PLURAL_OF(key_count));
 
 	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label)) {
 		for (n = 0; n < key_count; n++) {
