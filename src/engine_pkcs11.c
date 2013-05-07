@@ -70,6 +70,185 @@ static char *module;
 
 static char *init_args;
 
+/**
+ * Store extra information associated with a particular EVP_PKEY *.
+ *
+ * In the process of generating an EVP_PKEY, we have to enumerate all
+ * the slots, and keep that enumeration alive so long as the key is in
+ * use.
+ *
+ * However, since the EVP_PKEY structure isn't extendable, we have to
+ * store information externally, and rely on the user to call the
+ * correct cleanup function when done with the key.
+ */
+struct pkcs11_key_ext {
+
+	/* Since we only return the EVP_PKEY *, we can use it as an
+	 * index to find the associated data. */
+	EVP_PKEY *evp_pkey;
+
+	/* Storage for slots, and how many. */
+	PKCS11_SLOT *slots;
+	unsigned int slot_count;
+
+};
+
+/* This is structured as storage, index to one-past-end of used, and
+ * index to one-past-end of allocated. */
+struct pkcs11_key_ext *key_exts;
+int key_ext_count;
+int key_ext_alloc;
+
+/* Allocate initial storage for extra data for keys. */
+static int initialize_key_ext_info()
+{
+	fprintf(stderr, "%s: starting\n", __func__);
+
+	/* (Yes, malloc+memset is calloc, but doing it this way keeps
+	 * it consistent with the extension case.) */
+	int new_alloc = 10;
+	key_exts = malloc(new_alloc*sizeof(struct pkcs11_key_ext));
+	if (!key_exts)
+		return 0;
+	memset(key_exts, 0, new_alloc*sizeof(struct pkcs11_key_ext));
+	key_ext_alloc = 10;
+
+	fprintf(stderr, "%s: success\n", __func__);
+
+	return 1;
+}
+
+/*
+ * Add @key with given info.
+ *
+ * Returns 0 on failure, non-zero on success.
+ */
+static int add_key_ext_info(EVP_PKEY *evp_pkey,
+			    PKCS11_SLOT *slots,
+			    unsigned int slot_count)
+{
+	fprintf(stderr, "%s: evp_pkey=%p, count=%d\n", __func__,
+		evp_pkey, key_ext_count);
+
+	/* If we have used all allocated storage, allocate more. */
+	if (key_ext_count >= key_ext_alloc) {
+		fprintf(stderr, "%s:   reallocating\n", __func__);
+		int new_alloc = 2*key_ext_alloc;
+		struct pkcs11_key_ext *new_key_exts =
+			realloc(key_exts,
+				new_alloc*sizeof(struct pkcs11_key_ext));
+		if (!new_key_exts)
+			return 0;
+		memset(key_exts+key_ext_alloc, 0,
+		       (new_alloc-key_ext_alloc)*sizeof(struct pkcs11_key_ext));
+		key_ext_alloc = new_alloc;
+		key_exts = new_key_exts;
+	}
+
+	/* Update the first unused record. */
+	struct pkcs11_key_ext *key_ext = key_exts+key_ext_count;
+	key_ext->evp_pkey   = evp_pkey;
+	key_ext->slots      = slots;
+	key_ext->slot_count = slot_count;
+
+	/* Mark it as used. */
+	++key_ext_count;
+
+	fprintf(stderr, "%s:   count=%d\n", __func__, key_ext_count);
+
+	return 1;
+}
+
+/*
+ * Remove @key, filling in associated info if found.
+ *
+ * Returns 0 on failure, non-zero on success.
+ */
+static int del_key_ext_info(EVP_PKEY *evp_pkey,
+			    PKCS11_SLOT **slots,
+			    unsigned int *slot_count)
+{
+	fprintf(stderr, "%s: evp_pkey=%p\n", __func__, evp_pkey);
+
+	int i;
+	for (i = 0; i < key_ext_count; ++i) {
+		int prev_last;
+
+		/* Examine the key_ext at index i. */
+		struct pkcs11_key_ext *key_ext = key_exts+i;
+		fprintf(stderr, "%s:   i=%d, evp_pkey=%p\n", __func__,
+			i, key_ext->evp_pkey);
+		if (key_ext->evp_pkey != evp_pkey)
+			continue;
+
+		fprintf(stderr, "%s:   found, slots=%p\n", __func__,
+			key_ext->slots);
+
+		/* Found a matching key; copy values. */
+		*slots      = key_ext->slots;
+		*slot_count = key_ext->slot_count;
+
+		/* Then replace the info at this index with the last. */
+		prev_last = key_ext_count-1;
+		if (i < prev_last)
+			memcpy(key_ext, key_exts+prev_last,
+			       sizeof(struct pkcs11_key_ext));
+
+		/* Zero out the entry we copied in, update count. */
+		memset(key_exts+prev_last, 0,
+		       sizeof(struct pkcs11_key_ext));
+		key_ext_count = prev_last;
+
+		fprintf(stderr, "%s:   removed, count=%d\n", __func__, key_ext_count);
+
+		return 1;
+	}
+
+	fprintf(stderr, "%s:   not found, count=%d\n", __func__, key_ext_count);
+	return 0;
+}
+
+/**
+ * Frees @pkey and releases any associated resources.
+ *
+ * Always returns non-zero success.
+ */
+int release_key(EVP_PKEY *evp_pkey)
+{
+	PKCS11_SLOT *slots;
+	unsigned int slot_count;
+
+	fprintf(stderr, "%s: evp_pkey=%p, count=%d\n", __func__,
+		evp_pkey, key_ext_count);
+
+	if (del_key_ext_info(evp_pkey, &slots, &slot_count))
+		PKCS11_release_all_slots(ctx, slots, slot_count);
+
+	fprintf(stderr, "%s:   done, count=%d\n", __func__, key_ext_count);
+
+	return 1;
+}
+
+/*
+ * Free up all remaining key info and the key info structure
+ * itself.
+ */
+static void finalize_key_ext_info()
+{
+	fprintf(stderr, "%s\n", __func__);
+
+	/* Release everything left in the array.  Note that
+	 * key_ext_count is decremented within the
+	 * release_key_resources call.  Removing from the end causes
+	 * more searching but less copying. */
+	while (key_ext_count > 0)
+		release_key(key_exts[key_ext_count-1].evp_pkey);
+
+	/* And then release the array itself. */
+	free(key_exts);
+	key_exts = NULL;
+}
+
 int set_module(const char *modulename)
 {
 	module = modulename ? strdup(modulename) : NULL;
@@ -175,6 +354,7 @@ int set_init_args(const char *init_args_orig)
 
 int pkcs11_finish(ENGINE *engine)
 {
+	finalize_key_ext_info();
 	if (ctx) {
 		PKCS11_CTX_unload(ctx);
 		PKCS11_CTX_free(ctx);
@@ -192,6 +372,12 @@ int pkcs11_init(ENGINE *engine)
 #undef CLEANUP
 #define CLEANUP cleanup_done
 
+	if (!initialize_key_ext_info())
+		FAIL("Unable to initialize key_ext info");
+
+#undef CLEANUP
+#define CLEANUP cleanup_key_ext
+
 	ctx = PKCS11_CTX_new();
 	if (!ctx)
 		FAIL("Unable to allocate PKCS11_CTX");
@@ -208,6 +394,9 @@ int pkcs11_init(ENGINE *engine)
 
 cleanup_release_ctx:
 	PKCS11_CTX_free(ctx);
+
+cleanup_key_ext:
+	finalize_key_ext_info();
 
 cleanup_done:
 	return 0;
@@ -807,6 +996,10 @@ static EVP_PKEY *pkcs11_load_key(ENGINE *e, const char *s_slot_key_id,
 		   need a get_public_key? */
 		pk = PKCS11_get_private_key(selected_key);
 	}
+
+	/* Save the enumerated slots so we can release them later. */
+	if (pk)
+		add_key_ext_info(pk, slot_list, slot_count);
 
 cleanup_done:
 	if (key_label)
