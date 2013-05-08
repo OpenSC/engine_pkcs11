@@ -124,11 +124,9 @@ struct pkcs11_key_ext {
 
 };
 
-/* This is structured as storage, index to one-past-end of used, and
- * index to one-past-end of allocated. */
-struct pkcs11_key_ext *key_exts;
-int key_ext_count;
-int key_ext_alloc;
+static struct pkcs11_key_ext *key_exts; /* actual storage */
+static int key_ext_count;		/* index to one-past-end of used */
+static int key_ext_alloc;		/* index to one-past-end of alloc */
 
 /* Allocate initial storage for extra data for keys. */
 static int initialize_key_ext_info()
@@ -617,10 +615,10 @@ cleanup_done:
 	return rv;
 }
 
-PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
-			unsigned int cert_count,
-			char *id,
-			unsigned int id_len)
+static PKCS11_CERT *scan_certs(PKCS11_CERT *certs,
+			       unsigned int cert_count,
+			       char *id,
+			       unsigned int id_len)
 {
 	PKCS11_CERT *rv = NULL;
 	unsigned int n;
