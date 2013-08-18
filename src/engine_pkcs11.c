@@ -68,6 +68,17 @@ int set_module(const char *modulename)
 	return 1;
 }
 
+/* Free PIN storage in secure way. */
+static void zero_pin(void)
+{
+	if (pin != NULL) {
+		OPENSSL_cleanse(pin, pin_length);
+		free(pin);
+		pin = NULL;
+		pin_length = 0;
+	}
+}
+
 /**
  * Set the PIN used for login. A copy of the PIN shall be made.
  *
@@ -91,6 +102,7 @@ int set_pin(const char *_pin)
 
 	/* Copy the PIN. If the string cannot be copied, NULL
 	   shall be returned and errno shall be set. */
+	zero_pin();
 	pin = strdup(_pin);
 	if (pin != NULL)
 		pin_length = strlen(pin);
@@ -117,6 +129,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 
 	/* pin in the call back data, copy and use */
 	if (mycb != NULL && mycb->password) {
+		zero_pin();
 		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
 		if (!pin)
 			return 0;
@@ -132,6 +145,11 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 	if (callback_data != NULL)
 		UI_set_app_data(ui, callback_data);
 
+	zero_pin();
+	pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+	if (!pin)
+		return 0;
+	pin_length = MAX_PIN_LENGTH;
 	if (!UI_add_input_string
 	    (ui, "PKCS#11 token PIN: ", 0, pin, 1, MAX_PIN_LENGTH)) {
 		fprintf(stderr, "UI_add_input_string failed\n");
@@ -151,16 +169,6 @@ int set_init_args(const char *init_args_orig)
 {
 	init_args = init_args_orig ? strdup(init_args_orig) : NULL;
 	return 1;
-}
-
-static void zero_pin(void)
-{
-	if (pin != NULL) {
-		OPENSSL_cleanse(pin, pin_length);
-		free(pin);
-		pin = NULL;
-		pin_length = 0;
-	}
 }
 
 int pkcs11_finish(ENGINE * engine)
@@ -538,6 +546,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 					     cert_id, &cert_id_len,
 					     tmp_pin, &tmp_pin_len, &cert_label);
 			if (n && tmp_pin_len > 0 && tmp_pin[0] != 0) {
+				zero_pin();
 				pin = calloc(MAX_PIN_LENGTH, sizeof(char));
 				if (pin != NULL) {
 					memcpy(pin, tmp_pin, tmp_pin_len);
@@ -807,6 +816,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 					     tmp_pin, &tmp_pin_len, &key_label);
 
 			if (n && tmp_pin_len > 0 && tmp_pin[0] != 0) {
+				zero_pin();
 				pin = calloc(MAX_PIN_LENGTH, sizeof(char));
 				if (pin != NULL) {
 					memcpy(pin, tmp_pin, tmp_pin_len);
