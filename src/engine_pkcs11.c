@@ -116,34 +116,24 @@ int inc_verbose(void)
 	return 1;
 }
 
-/* either get the pin code from the supplied callback data, or get the pin
- * via asking our self. In both cases keep a copy of the pin code in the
- * pin variable (strdup'ed copy). */
+/* Get the PIN via asking user interface. The supplied call-back data are
+ * passed to the user interface implemented by an application. Only the
+ * application knows how to interpret the call-back data.
+ * A (strdup'ed) copy of the PIN code will be stored in the pin variable. */
 static int get_pin(UI_METHOD * ui_method, void *callback_data)
 {
 	UI *ui;
-	struct {
-		const void *password;
-		const char *prompt_info;
-	} *mycb = callback_data;
-
-	/* pin in the call back data, copy and use */
-	if (mycb != NULL && mycb->password) {
-		zero_pin();
-		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
-		if (!pin)
-			return 0;
-		strncpy(pin,mycb->password,MAX_PIN_LENGTH);
-		pin_length = MAX_PIN_LENGTH;
-		return 1;
-	}
 
 	/* call ui to ask for a pin */
 	ui = UI_new();
+	if (ui == NULL) {
+		fprintf(stderr, "UI_new failed\n");
+		return 0;
+	}
 	if (ui_method != NULL)
 		UI_set_method(ui, ui_method);
 	if (callback_data != NULL)
-		UI_set_app_data(ui, callback_data);
+		UI_add_user_data(ui, callback_data);
 
 	zero_pin();
 	pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
@@ -151,7 +141,8 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 		return 0;
 	pin_length = MAX_PIN_LENGTH;
 	if (!UI_add_input_string
-	    (ui, "PKCS#11 token PIN: ", 0, pin, 1, MAX_PIN_LENGTH)) {
+	    (ui, "PKCS#11 token PIN: ", UI_INPUT_FLAG_DEFAULT_PWD,
+	    pin, 1, MAX_PIN_LENGTH)) {
 		fprintf(stderr, "UI_add_input_string failed\n");
 		UI_free(ui);
 		return 0;
