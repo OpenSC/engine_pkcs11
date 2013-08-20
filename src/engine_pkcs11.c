@@ -694,13 +694,19 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		fprintf(stderr, "Found %u cert%s:\n", cert_count,
 			(cert_count <= 1) ? "" : "s");
 	}
-	if ((s_slot_cert_id && *s_slot_cert_id) && (cert_id_len != 0)) {
+	if ((s_slot_cert_id && *s_slot_cert_id) && (cert_id_len != 0 || cert_label != NULL)) {
 		for (n = 0; n < cert_count; n++) {
 			PKCS11_CERT *k = certs + n;
 
-			if (cert_id_len != 0 && k->id_len == cert_id_len &&
-			    memcmp(k->id, cert_id, cert_id_len) == 0) {
-				selected_cert = k;
+			if (cert_label == NULL) {
+				if (cert_id_len != 0 && k->id_len == cert_id_len &&
+				    memcmp(k->id, cert_id, cert_id_len) == 0) {
+				    selected_cert = k;
+				}
+			} else {
+				if (strcmp(k->label, cert_label) == 0) {
+				    selected_cert = k;
+				}
 			}
 		}
 	} else {
