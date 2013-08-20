@@ -263,7 +263,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 		return 0;
 
 	/* support for several formats */
-#define HEXDIGITS "01234567890ABCDEFabcdef"
+#define HEXDIGITS "01234567890ABCDEFabcdef:"
 #define DIGITS "0123456789"
 
 	/* first: pure hex number (id, slot is 0) */
