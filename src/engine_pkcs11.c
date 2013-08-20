@@ -266,14 +266,14 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 #define HEXDIGITS "01234567890ABCDEFabcdef"
 #define DIGITS "0123456789"
 
-	/* first: pure hex number (id, slot is 0) */
+	/* first: pure hex number (id, slot is undefined) */
 	if (strspn(slot_id, HEXDIGITS) == strlen(slot_id)) {
 		/* ah, easiest case: only hex. */
 		if ((strlen(slot_id) + 1) / 2 > *id_len) {
 			fprintf(stderr, "id string too long!\n");
 			return 0;
 		}
-		*slot = 0;
+		*slot = -1;
 		return hex_to_bin(slot_id, id, id_len);
 	}
 
@@ -304,7 +304,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 		return hex_to_bin(slot_id + i, id, id_len);
 	}
 
-	/* third: id_<id>  */
+	/* third: id_<id>, slot is undefined */
 	if (strncmp(slot_id, "id_", 3) == 0) {
 		if (strspn(slot_id + 3, HEXDIGITS) + 3 != strlen(slot_id)) {
 			fprintf(stderr, "could not parse string!\n");
@@ -315,12 +315,13 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 			fprintf(stderr, "id string too long!\n");
 			return 0;
 		}
-		*slot = 0;
+		*slot = -1;
 		return hex_to_bin(slot_id + 3, id, id_len);
 	}
 
-	/* label_<label>  */
+	/* label_<label>, slot is undefined */
 	if (strncmp(slot_id, "label_", 6) == 0) {
+		*slot = -1;
 		*label = strdup(slot_id + 6);
 		return *label != NULL;
 	}
