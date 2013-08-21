@@ -200,7 +200,8 @@ static int bind_helper(ENGINE * e)
 */
 #endif
 	    !ENGINE_set_load_pubkey_function(e, pkcs11_load_public_key) ||
-	    !ENGINE_set_load_privkey_function(e, pkcs11_load_private_key)) {
+	    !ENGINE_set_load_privkey_function(e, pkcs11_load_private_key) ||
+	    !ENGINE_set_load_ssl_client_cert_function(e, pkcs11_load_ssl_client_cert)) {
 		return 0;
 	} else {
 		return 1;
