@@ -39,6 +39,7 @@
 #endif
 
 #define fail(msg) { fprintf(stderr,msg); return NULL;}
+#define fail0(msg) { fprintf(stderr,msg); return 0;}
 
 /** The maximum length of an internally-allocated PIN */
 #define MAX_PIN_LENGTH   32
@@ -723,6 +724,63 @@ int load_cert_ctrl(ENGINE * e, void *p)
 	return 1;
 }
 
+/*
+ * Log-into the token if necesary.
+ *
+ * @slot is PKCS11 slot to log in
+ * @tok is PKCS11 token to log in (??? could be derived as @slot->token)
+ * @ui_method is OpenSSL user inteface which is used to ask for a password
+ * @callback_data are application data to the user interface
+ * @return 1 on success, 0 on error.
+ */
+static int pkcs11_login(PKCS11_SLOT *slot, PKCS11_TOKEN *tok, UI_METHOD *ui_method, void *callback_data)
+{
+	/* Perform login to the token if required */
+	if (tok->loginRequired) {
+		/* If the token has a secure login (i.e., an external keypad),
+		   then use a NULL pin. Otherwise, check if a PIN exists. If
+		   not, allocate and obtain a new PIN. */
+		if (tok->secureLogin) {
+			/* Free the PIN if it has already been
+			   assigned (i.e, cached by get_pin) */
+			free_pin();
+		} else if (pin == NULL) {
+			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+			pin_length = MAX_PIN_LENGTH;
+			if (pin == NULL) {
+				fail0("Could not allocate memory for PIN\n");
+			}
+			if (!get_pin(ui_method, callback_data) ) {
+				free_pin();
+				fail0("No pin code was entered\n");
+			}
+		}
+
+		/* Now login in with the (possibly NULL) pin */
+		if (PKCS11_login(slot, 0, pin)) {
+			/* Login failed, so free the PIN if present */
+			free_pin();
+			fail0("Login failed\n");
+		}
+		/* Login successful, PIN retained in case further logins are
+		   required. This will occur on subsequent calls to the
+		   pkcs11_load_key function. Subsequent login calls should be
+		   relatively fast (the token should maintain its own login
+		   state), although there may still be a slight performance
+		   penalty. We could maintain state noting that successful
+		   login has been performed, but this state may not be updated
+		   if the token is removed and reinserted between calls. It
+		   seems safer to retain the PIN and peform a login on each
+		   call to pkcs11_load_key, even if this may not be strictly
+		   necessary. */
+		/* TODO when does PIN get freed after successful login? */
+		/* TODO confirm that multiple login attempts do not introduce
+		   significant performance penalties */
+
+	}
+	return 1;
+}
+
 static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 				 UI_METHOD * ui_method, void *callback_data,
 				 int isPrivate)
@@ -912,47 +970,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	}
 
 	/* Perform login to the token if required */
-	if (tok->loginRequired) {
-		/* If the token has a secure login (i.e., an external keypad),
-		   then use a NULL pin. Otherwise, check if a PIN exists. If
-		   not, allocate and obtain a new PIN. */
-		if (tok->secureLogin) {
-			/* Free the PIN if it has already been 
-			   assigned (i.e, cached by get_pin) */
-			free_pin();
-		} else if (pin == NULL) {
-			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
-			pin_length = MAX_PIN_LENGTH;
-			if (pin == NULL) {
-				fail("Could not allocate memory for PIN");
-			}
-			if (!get_pin(ui_method, callback_data) ) {
-				free_pin();
-				fail("No pin code was entered");
-			}
-		}
-
-		/* Now login in with the (possibly NULL) pin */
-		if (PKCS11_login(slot, 0, pin)) {
-			/* Login failed, so free the PIN if present */
-			free_pin();
-			fail("Login failed\n");
-		}
-		/* Login successful, PIN retained in case further logins are 
-		   required. This will occur on subsequent calls to the
-		   pkcs11_load_key function. Subsequent login calls should be
-		   relatively fast (the token should maintain its own login
-		   state), although there may still be a slight performance 
-		   penalty. We could maintain state noting that successful
-		   login has been performed, but this state may not be updated
-		   if the token is removed and reinserted between calls. It
-		   seems safer to retain the PIN and peform a login on each
-		   call to pkcs11_load_key, even if this may not be strictly
-		   necessary. */
-		/* TODO when does PIN get freed after successful login? */
-		/* TODO confirm that multiple login attempts do not introduce
-		   significant performance penalties */
-
+	if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
+		return NULL;
 	}
 
 	/* Make sure there is at least one private key on the token */
