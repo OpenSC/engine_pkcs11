@@ -62,6 +62,8 @@
 #include <config.h>
 #include <stdio.h>
 #include <string.h>
+#include <openssl/opensslv.h>
+#include <openssl/opensslconf.h>
 #include <openssl/crypto.h>
 #include <openssl/objects.h>
 #include <openssl/engine.h>
@@ -126,6 +128,13 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 /* Destructor */
 static int pkcs11_engine_destroy(ENGINE * e)
 {
+	
+#ifndef OPENSSL_NO_EC
+#ifndef OPENSSL_NO_ECDSA
+	PKCS11_ecdsa_method_free();
+#endif
+#endif
+
 	return 1;
 }
 
@@ -187,6 +196,14 @@ static int bind_helper(ENGINE * e)
 #endif
 #ifndef OPENSSL_NO_DH
 	    !ENGINE_set_DH(e, DH_get_default_method()) ||
+#endif
+#ifndef OPENSSL_NO_EC
+#ifndef OPENSSL_NO_ECDSA
+		!ENGINE_set_ECDSA(e, PKCS11_get_ecdsa_method()) ||
+#endif 
+/* TODO add ECDH 
+		!ENGINE_set_ECDH(e, PKCS11_get_ecdh_method()) ||
+*/
 #endif
 	    !ENGINE_set_RAND(e, RAND_SSLeay()) ||
 #if 0
