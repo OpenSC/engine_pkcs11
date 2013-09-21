@@ -55,4 +55,26 @@ EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
 EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 				  UI_METHOD * ui_method, void *callback_data);
 
+extern int RSA_CRYPTO_EX_idx;
+struct PKCS11_RSA_CRYPTO_EX
+{
+	PKCS11_CTX *ctx;
+
+	struct {
+		PKCS11_SLOT *data;
+		int count;
+	} slots;
+
+	struct {
+		PKCS11_KEY *data;
+		int count;
+	} keys;
+
+	PKCS11_KEY *key;
+};
+
+struct PKCS11_RSA_CRYPTO_EX *PKCS11_RSA_CRYPTO_EX_create(PKCS11_CTX *ctx, PKCS11_SLOT *slots, int slotcount, PKCS11_KEY *keys, int keycount, PKCS11_KEY *key);
+void PKCS11_RSA_CRYPTO_EX_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp);
+
+
 #endif

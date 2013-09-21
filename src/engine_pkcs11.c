@@ -45,6 +45,11 @@
 
 static PKCS11_CTX *ctx;
 
+/**
+ * The index used with RSA_(get|set)_ex_data
+ */
+int RSA_CRYPTO_EX_idx = -1;
+
 /** 
  * The PIN used for login. Cache for the get_pin function.
  * The memory for this PIN is always owned internally,
@@ -790,6 +795,18 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	}
 	if (key_label != NULL)
 		free(key_label);
+	switch(EVP_PKEY_type(pk->type))
+	{
+	case EVP_PKEY_RSA:
+		RSA_set_ex_data(EVP_PKEY_get0(pk),
+						RSA_CRYPTO_EX_idx,
+						PKCS11_RSA_CRYPTO_EX_create(ctx, slot_list, slot_count, keys, key_count, selected_key));
+		break;
+
+	default:
+		break;
+	}
+
 	return pk;
 }
 
@@ -813,4 +830,33 @@ EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 	if (pk == NULL)
 		fail("PKCS11_get_private_key returned NULL\n");
 	return pk;
+}
+
+struct PKCS11_RSA_CRYPTO_EX *PKCS11_RSA_CRYPTO_EX_create(PKCS11_CTX *ctx, PKCS11_SLOT *slots, int slotcount, PKCS11_KEY *keys, int keycount, PKCS11_KEY *key)
+{
+	struct PKCS11_RSA_CRYPTO_EX *r = OPENSSL_malloc(sizeof(struct PKCS11_RSA_CRYPTO_EX));
+	if (r == 0)
+		return NULL;
+	r->ctx = ctx;
+	r->slots.data = slots;
+	r->slots.count = slotcount;
+	r->keys.data = keys;
+	r->keys.count = keycount;
+	r->key = key;
+	return r;
+}
+
+static void PKCS11_RSA_CRYPTO_EX_destroy(struct PKCS11_RSA_CRYPTO_EX *data)
+{
+	/* avoid recursion */
+	data->key->evp_key = NULL;
+	PKCS11_release_all_slots(data->ctx, data->slots.data, data->slots.count);
+}
+
+void PKCS11_RSA_CRYPTO_EX_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
+{
+	if (ptr == NULL || idx != RSA_CRYPTO_EX_idx)
+		return;
+	PKCS11_RSA_CRYPTO_EX_destroy(ptr);
+	CRYPTO_set_ex_data(ad, RSA_CRYPTO_EX_idx, NULL);
 }

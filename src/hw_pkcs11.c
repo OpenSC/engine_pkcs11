@@ -174,6 +174,21 @@ static int pkcs11_engine_rsa_finish(RSA * rsa)
 static int bind_helper(ENGINE * e)
 {
 	ERR_load_PKCS11_strings();
+
+	/**
+	 * workaround a bug in OpenSSL
+	 * RSA_*_app_data uses idx 0 but RSA_get_ex_new_index still
+	 * returns idx 0 as valid data Using idx 0 results in messing
+	 * with the RSA_*_app_data used by libp11
+	 */
+	while( RSA_get_ex_new_index(0, "DEFAULT APPDATA", NULL, NULL, NULL) <= 0);
+
+	/**
+	 * Currently it is not possible to unset the index
+	 * once the engine gets unmapped, EVP_PKEY_free/RSA_free will
+	 * call the unmapped callback and this will die.
+	 */
+	RSA_CRYPTO_EX_idx = RSA_get_ex_new_index(0, "OpenSC PKCS11 RSA key handle", NULL, NULL, PKCS11_RSA_CRYPTO_EX_free); 
 	if (!ENGINE_set_id(e, PKCS11_ENGINE_ID) ||
 	    !ENGINE_set_destroy_function(e, pkcs11_engine_destroy) ||
 	    !ENGINE_set_init_function(e, pkcs11_init) ||
