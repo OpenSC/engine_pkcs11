@@ -851,6 +851,7 @@ static void PKCS11_RSA_CRYPTO_EX_destroy(struct PKCS11_RSA_CRYPTO_EX *data)
 	/* avoid recursion */
 	data->key->evp_key = NULL;
 	PKCS11_release_all_slots(data->ctx, data->slots.data, data->slots.count);
+	OPENSSL_free(data);
 }
 
 void PKCS11_RSA_CRYPTO_EX_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp)
