@@ -521,6 +521,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	}
 
 	x509 = X509_dup(selected_cert->x509);
+	PKCS11_release_all_slots(ctx, slot_list, slot_count);
 	if (cert_label != NULL)
 		free(cert_label);
 	return x509;
