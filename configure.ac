@@ -23,14 +23,6 @@ AC_PROG_CC
 PKG_PROG_PKG_CONFIG
 AC_C_BIGENDIAN
 
-AC_MSG_CHECKING([svn checkout])
-if test -e "${srcdir}/packaged"; then
-	svn_checkout="no"
-else
-	svn_checkout="yes"
-fi
-AC_MSG_RESULT([${svn_checkout}])
-
 AC_ARG_WITH(
 	[cygwin-native],
 	[AS_HELP_STRING([--with-cygwin-native],[compile native win32])],
@@ -78,13 +70,6 @@ AC_ARG_ENABLE(
 	[enable_pedantic="no"]
 )
 
-AC_ARG_ENABLE(
-	[doc],
-	[AS_HELP_STRING([--enable-doc],[enable installation of documents @<:@disabled@:>@])],
-	,
-	[enable_doc="no"]
-)
-
 AC_ARG_WITH(
 	[enginesdir],
 	[AS_HELP_STRING([--with-enginesdir],[OpenSSL engines directory @<:@LIBDIR/engines@:>@])],
@@ -124,43 +109,6 @@ AC_CHECK_HEADERS([ \
 ])
 
 PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.5],, [AC_MSG_ERROR([libp11 >= 0.2.5 is required])])
-
-dnl These required for svn checkout
-AC_ARG_VAR([XSLTPROC], [xsltproc utility])
-AC_ARG_VAR([SVN], [subversion utility])
-AC_ARG_VAR([WGET], [wget utility])
-AC_ARG_VAR([WGET_OPTS], [wget options])
-AC_ARG_VAR([TR], [tr utility])
-AC_CHECK_PROGS([XSLTPROC],[xsltproc])
-AC_CHECK_PROGS([SVN],[svn])
-AC_CHECK_PROGS([WGET],[wget])
-AC_CHECK_PROGS([TR],[tr])
-test -z "${WGET_OPTS}" && WGET_OPTS="-nv"
-
-dnl svn checkout dependencies
-if test "${svn_checkout}" = "yes"; then
-	AC_MSG_CHECKING([XSLTPROC requirement])
-	if test -n "${XSLTPROC}"; then
-		AC_MSG_RESULT([ok])
-	else
-		if test "${enable_doc}" = "yes"; then
-			AC_MSG_ERROR([Missing XSLTPROC svn build with doc])
-		else
-			AC_MSG_WARN(["make dist" will not work])
-		fi
-	fi
-
-	AC_MSG_CHECKING([svn doc build dependencies])
-	if test -n "${SVN}" -a -n "${TR}" -a -n "${WGET}"; then
-		AC_MSG_RESULT([ok])
-	else
-		if test "${enable_doc}" = "yes"; then
-			AC_MSG_ERROR([Missing SVN, TR or WGET for svn doc build])
-		else
-			AC_MSG_WARN(["make dist" will not work])
-		fi
-	fi
-fi
 
 PKG_CHECK_MODULES(
 	[OPENSSL],
@@ -289,10 +237,8 @@ AC_SUBST([ENGINE_PKCS11_VERSION_FIX])
 AC_SUBST([WIN_LIBPREFIX])
 AC_SUBST([OPENSSL_EXTRA_LDFLAGS])
 
-AM_CONDITIONAL([SVN_CHECKOUT], [test "${svn_checkout}" = "yes"])
 AM_CONDITIONAL([WIN32], [test "${WIN32}" = "yes"])
 AM_CONDITIONAL([CYGWIN], [test "${CYGWIN}" = "yes"])
-AM_CONDITIONAL([ENABLE_DOC], [test "${enable_doc}" = "yes"])
 
 if test "${enable_pedantic}" = "yes"; then
 	enable_strict="yes";
@@ -304,8 +250,6 @@ fi
 
 AC_CONFIG_FILES([
 	Makefile
-	doc/Makefile
-	doc/nonpersistent/Makefile
 	src/Makefile
 	src/versioninfo.rc
 ])
@@ -318,8 +262,6 @@ engine_pkcs11 has been configured with the following options:
 
 Version:                 ${PACKAGE_VERSION}
 Libraries:               $(eval eval eval echo "${libdir}")
-
-doc support:             ${enable_doc}
 
 Host:                    ${host}
 Compiler:                ${CC}

@@ -15,7 +15,7 @@ MAINTAINERCLEANFILES = \
 	$(srcdir)/packaged
 EXTRA_DIST = .gitignore
 
-SUBDIRS = src doc
+SUBDIRS = src
 
 dist_noinst_SCRIPTS = bootstrap
 dist_doc_DATA = NEWS
