@@ -174,22 +174,6 @@ int pkcs11_init(ENGINE *e)
 	return 1;
 }
 
-int pkcs11_rsa_finish(RSA * rsa)
-{
-	if (pin) {
-		OPENSSL_cleanse(pin, pin_length);
-		free(pin);
-		pin = NULL;
-		pin_length = 0;
-	}
-	if (module) {
-		free(module);
-		module = NULL;
-	}
-	/* need to free RSA_ex_data? */
-	return 1;
-}
-
 int load_cert_ctrl(ENGINE * e, void *p)
 {
 	(void)e;
