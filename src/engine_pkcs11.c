@@ -147,8 +147,9 @@ int set_init_args(const char *init_args_orig)
 	return 1;
 }
 
-int pkcs11_finish(ENGINE * engine)
+int pkcs11_finish(ENGINE *e)
 {
+	(void)e;
 	if (ctx) {
 		PKCS11_CTX_unload(ctx);
 		PKCS11_CTX_free(ctx);
@@ -158,8 +159,9 @@ int pkcs11_finish(ENGINE * engine)
 	return 1;
 }
 
-int pkcs11_init(ENGINE * engine)
+int pkcs11_init(ENGINE *e)
 {
+	(void)e;
 	if (verbose) {
 		fprintf(stderr, "initializing engine\n");
 	}
@@ -190,6 +192,7 @@ int pkcs11_rsa_finish(RSA * rsa)
 
 int load_cert_ctrl(ENGINE * e, void *p)
 {
+	(void)e;
 	struct {
 		const char *s_slot_cert_id;
 		X509 *cert;
@@ -209,6 +212,7 @@ int load_cert_ctrl(ENGINE * e, void *p)
 EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
 				 UI_METHOD * ui_method, void *callback_data)
 {
+	(void)e;
 	EVP_PKEY *pk;
 
 	pk = PKCS11_load_key(ctx, s_key_id, &_pin, ui_method, callback_data, 0, verbose);
@@ -220,6 +224,7 @@ EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
 EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 				  UI_METHOD * ui_method, void *callback_data)
 {
+	(void)e;
 	EVP_PKEY *pk;
 
 	pk = PKCS11_load_key(ctx, s_key_id, &_pin, ui_method, callback_data, 1, verbose);

@@ -126,6 +126,7 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 /* Destructor */
 static int pkcs11_engine_destroy(ENGINE * e)
 {
+	(void)e;
 	ERR_unload_PKCS11_strings();
 	return 1;
 }
@@ -133,6 +134,8 @@ static int pkcs11_engine_destroy(ENGINE * e)
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 			      void (*f) ())
 {
+	(void)i;
+	(void)f;
 	/*int initialised = ((pkcs11_dso == NULL) ? 0 : 1); */
 	switch (cmd) {
 	case CMD_MODULE_PATH:
