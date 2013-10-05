@@ -47,8 +47,6 @@ int pkcs11_finish(ENGINE * engine);
 
 int pkcs11_init(ENGINE * engine);
 
-int pkcs11_rsa_finish(RSA * rsa);
-
 EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
 				 UI_METHOD * ui_method, void *callback_data);
 
