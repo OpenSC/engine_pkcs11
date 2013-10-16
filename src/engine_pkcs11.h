@@ -53,4 +53,5 @@ EVP_PKEY *pkcs11_load_public_key(ENGINE * e, const char *s_key_id,
 EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 				  UI_METHOD * ui_method, void *callback_data);
 
+void pkcs11_pin_clear(void);
 #endif

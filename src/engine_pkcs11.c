@@ -62,6 +62,11 @@ static PKCS11_PIN _pin =
 	.get_pin = get_pin
 };
 
+void pkcs11_pin_clear(void)
+{
+	PKCS11_PIN_clear(&_pin);
+}
+
 static int verbose = 0;
 
 static char *module = NULL;
@@ -155,7 +160,6 @@ int pkcs11_finish(ENGINE *e)
 		PKCS11_CTX_free(ctx);
 		ctx = NULL;
 	}
-	PKCS11_PIN_clear(&_pin);
 	return 1;
 }
 

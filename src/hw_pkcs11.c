@@ -128,6 +128,7 @@ static int pkcs11_engine_destroy(ENGINE * e)
 {
 	(void)e;
 	ERR_unload_PKCS11_strings();
+	pkcs11_pin_clear();
 	return 1;
 }
 
