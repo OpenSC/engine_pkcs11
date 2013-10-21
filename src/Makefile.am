@@ -21,14 +21,9 @@ engine_pkcs11_la_CFLAGS = $(AM_CFLAGS) $(OPENSSL_EXTRA_CFLAGS) $(OPENSSL_CFLAGS)
 	$(LIBP11_CFLAGS)
 engine_pkcs11_la_LIBADD = $(ENGINE_LINK) $(OPENSSL_LIBS) $(LIBP11_LIBS)
 engine_pkcs11_la_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_EXTRA_LDFLAGS) \
-	-module -avoid-version \
+	-module -shared -avoid-version \
 	-export-symbols "$(srcdir)/engine_pkcs11.exports" \
 	-no-undefined
-
-install-data-hook:
-	rm -f "$(DESTDIR)$(enginesdir)/engine_pkcs11.la"
-	rm -f "$(DESTDIR)$(enginesdir)/engine_pkcs11.a"
-	rm -f "$(DESTDIR)$(enginesdir)/engine_pkcs11.dll.a"
 
 RCCOMPILE = $(RC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS)
