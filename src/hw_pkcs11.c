@@ -126,12 +126,17 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 /* Destructor */
 static int pkcs11_engine_destroy(ENGINE * e)
 {
+	(void)e;
+	ERR_unload_PKCS11_strings();
+	pkcs11_pin_clear();
 	return 1;
 }
 
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 			      void (*f) ())
 {
+	(void)i;
+	(void)f;
 	/*int initialised = ((pkcs11_dso == NULL) ? 0 : 1); */
 	switch (cmd) {
 	case CMD_MODULE_PATH:
@@ -172,6 +177,8 @@ static int pkcs11_engine_rsa_finish(RSA * rsa)
  * "dynamic" ENGINE support too */
 static int bind_helper(ENGINE * e)
 {
+	ERR_load_PKCS11_strings();
+
 	if (!ENGINE_set_id(e, PKCS11_ENGINE_ID) ||
 	    !ENGINE_set_destroy_function(e, pkcs11_engine_destroy) ||
 	    !ENGINE_set_init_function(e, pkcs11_init) ||
