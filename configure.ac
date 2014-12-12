@@ -108,6 +108,14 @@ AC_CHECK_HEADERS([ \
 	locale.h getopt.h dlfcn.h utmp.h \
 ])
 
+PKG_CHECK_MODULES(
+	[P11KIT],
+	[p11-kit-1],
+	[proxy_module="`$PKG_CONFIG --variable=proxy_module p11-kit-1`"
+	 AC_DEFINE_UNQUOTED([DEFAULT_PKCS11_MODULE], "${proxy_module}", [p11-kit proxy])],
+	[]
+)
+
 PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.5],, [AC_MSG_ERROR([libp11 >= 0.2.5 is required])])
 
 PKG_CHECK_MODULES(

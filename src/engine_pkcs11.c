@@ -62,6 +62,7 @@ static char *init_args = NULL;
 
 int set_module(const char *modulename)
 {
+	free (module);
 	module = modulename ? strdup(modulename) : NULL;
 	return 1;
 }
@@ -169,13 +170,19 @@ int pkcs11_finish(ENGINE * engine)
 
 int pkcs11_init(ENGINE * engine)
 {
+	char *mod = module;
+
+#ifdef DEFAULT_PKCS11_MODULE
+	if (!mod)
+		mod = DEFAULT_PKCS11_MODULE;
+#endif
 	if (verbose) {
 		fprintf(stderr, "initializing engine\n");
 	}
 	ctx = PKCS11_CTX_new();
         PKCS11_CTX_init_args(ctx, init_args);
-	if (PKCS11_CTX_load(ctx, module) < 0) {
-		fprintf(stderr, "unable to load module %s\n", module);
+	if (PKCS11_CTX_load(ctx, mod) < 0) {
+		fprintf(stderr, "unable to load module %s\n", mod);
 		return 0;
 	}
 	return 1;
