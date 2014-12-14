@@ -502,7 +502,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_SLOT *found_slot = NULL;
-	PKCS11_TOKEN *tok;
+	PKCS11_TOKEN *tok, *match_tok = NULL;
 	PKCS11_CERT *certs, *selected_cert = NULL;
 	X509 *x509;
 	unsigned int slot_count, cert_count, n, m;
@@ -513,11 +513,16 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	char flags[64];
 
 	if (s_slot_cert_id && *s_slot_cert_id) {
-		n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
-					 cert_id, &cert_id_len, &cert_label);
+		if (!strncmp(s_slot_cert_id, "pkcs11:", 7)) {
+			n = parse_pkcs11_uri(s_slot_cert_id, &match_tok,
+					     cert_id, &cert_id_len, &cert_label);
+		} else {
+			n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
+						 cert_id, &cert_id_len, &cert_label);
+		}
 		if (!n) {
 			fprintf(stderr,
-				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
+				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label> or a PKCS#11 URI\n");
 			fprintf(stderr,
 				"where <slot> is the slot number as normal integer,\n");
 			fprintf(stderr,
@@ -569,7 +574,17 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
 			found_slot = slot;
 		}
-
+		if (match_tok && slot->token &&
+		    (!match_tok->label ||
+		     !strcmp(match_tok->label, slot->token->label)) &&
+		    (!match_tok->manufacturer ||
+		     !strcmp(match_tok->manufacturer, slot->token->manufacturer)) &&
+		    (!match_tok->serialnr ||
+		     !strcmp(match_tok->serialnr, slot->token->serialnr)) &&
+		    (!match_tok->model ||
+		     !strcmp(match_tok->model, slot->token->model))) {
+			found_slot = slot;
+		}
 		if (verbose) {
 			fprintf(stderr, "[%lu] %-25.25s  %-16s",
 				PKCS11_get_slotid_from_slot(slot),
@@ -583,11 +598,20 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		}
 	}
 
-	if (slot_nr == -1) {
+	if (match_tok) {
+		free(match_tok->model);
+		free(match_tok->manufacturer);
+		free(match_tok->serialnr);
+		free(match_tok->label);
+		free(match_tok);
+	}
+	if (found_slot) {
+		slot = found_slot;
+	} else if (match_tok) {
+		fail("specified slot not found\n");
+	} else if (slot_nr == -1) {
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
-	} else if (found_slot) {
-		slot = found_slot; 
 	} else {
 		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
