@@ -253,7 +253,6 @@ static int hex_to_bin(const char *in, unsigned char *out, size_t * outlen)
 }
 
 /* parse string containing slot and id information */
-
 static int parse_slot_id_string(const char *slot_id, int *slot,
 				unsigned char *id, size_t * id_len,
 				char **label)
@@ -378,6 +377,120 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 
 	fprintf(stderr, "could not parse string!\n");
 	return 0;
+}
+
+static int parse_uri_attr(const char *attr, int attrlen, unsigned char **field,
+			  size_t *field_len)
+{
+	size_t max, outlen = 0;
+	unsigned char *out;
+	int ret = 1;
+
+	if (field_len) {
+		out = *field;
+		max = *field_len;
+	} else {
+		out = malloc(attrlen + 1);
+		if (!out)
+			return 0;
+		max = attrlen + 1;
+	}
+
+	while (ret && attrlen && outlen < max) {
+		if (*attr == '%') {
+			if (attrlen < 3) {
+				ret = 0;
+			} else {
+				char tmp[3];
+				size_t l = 1;
+
+				tmp[0] = attr[1];
+				tmp[1] = attr[2];
+				tmp[2] = 0;
+				ret = hex_to_bin(tmp, &out[outlen++], &l);
+				attrlen -= 3;
+				attr += 3;
+			}
+
+		} else {
+			out[outlen++] = *(attr++);
+			attrlen--;
+		}
+	}
+	if (attrlen && outlen == max)
+		ret = 0;
+
+	if (ret) {
+		if (field_len) {
+			*field_len = outlen;
+		} else {
+			out[outlen] = 0;
+			*field = out;
+		}
+	} else {
+		if (!field_len)
+			free(out);
+	}
+
+	return ret;
+}
+
+static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
+			    unsigned char *id, size_t *id_len,
+			    char **label)
+{
+	PKCS11_TOKEN *tok;
+	char *newlabel = NULL;
+	const char *end, *p;
+	int rv = 1;
+
+	tok = calloc(1, sizeof(*tok));
+	if (!tok) {
+		fprintf(stderr, "Could not allocate memory for token info\n");
+		return 0;
+	}
+
+	/* We are only ever invoked if the string starts with 'pkcs11:' */
+	end = uri + 6;
+	while (rv && end[0] && end[1]) {
+		p = end + 1;
+		end = strchr(p, ';');
+		if (!end)
+			end = p + strlen(p);
+
+		if (!strncmp(p, "model=", 6)) {
+			p += 6;
+			rv = parse_uri_attr(p, end - p, (void *)&tok->model, NULL);
+		} else if (!strncmp(p, "manufacturer=", 13)) {
+			p += 13;
+			rv = parse_uri_attr(p, end - p, (void *)&tok->manufacturer, NULL);
+		} else if (!strncmp(p, "token=", 6)) {
+			p += 6;
+			rv = parse_uri_attr(p, end - p, (void *)&tok->label, NULL);
+		} else if (!strncmp(p, "serial=", 7)) {
+			p += 7;
+			rv = parse_uri_attr(p, end - p, (void *)&tok->serialnr, NULL);
+		} else if (!strncmp(p, "object=", 7)) {
+			p += 7;
+			rv = parse_uri_attr(p, end - p, (void *)&newlabel, NULL);
+		} else if (!strncmp(p, "id=", 3)) {
+			p += 3;
+			rv = parse_uri_attr(p, end - p, (void *)&id, id_len);
+		} else {
+			rv = 0;
+		}
+	}
+
+	if (rv) {
+		*label = newlabel;
+		*p_tok = tok;
+	} else {
+		free(tok);
+		tok = NULL;
+		free(newlabel);
+	}
+
+	return rv;
 }
 
 #define MAX_VALUE_LEN	200
@@ -551,7 +664,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_SLOT *found_slot = NULL;
-	PKCS11_TOKEN *tok;
+	PKCS11_TOKEN *tok, *match_tok = NULL;
 	PKCS11_KEY *keys, *selected_key = NULL;
 	PKCS11_CERT *certs;
 	EVP_PKEY *pk;
@@ -563,12 +676,17 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	char flags[64];
 
 	if (s_slot_key_id && *s_slot_key_id) {
-		n = parse_slot_id_string(s_slot_key_id, &slot_nr,
-					 key_id, &key_id_len, &key_label);
+		if (!strncmp(s_slot_key_id, "pkcs11:", 7)) {
+			n = parse_pkcs11_uri(s_slot_key_id, &match_tok,
+					     key_id, &key_id_len, &key_label);
+		} else {
+			n = parse_slot_id_string(s_slot_key_id, &slot_nr,
+						 key_id, &key_id_len, &key_label);
+		}
 
 		if (!n) {
 			fprintf(stderr,
-				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label>\n");
+				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label> or a PKCS#11 URI\n");
 			fprintf(stderr,
 				"where <slot> is the slot number as normal integer,\n");
 			fprintf(stderr,
@@ -619,7 +737,17 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
 			found_slot = slot;
 		}
-
+		if (match_tok && slot->token &&
+		    (!match_tok->label ||
+		     !strcmp(match_tok->label, slot->token->label)) &&
+		    (!match_tok->manufacturer ||
+		     !strcmp(match_tok->manufacturer, slot->token->manufacturer)) &&
+		    (!match_tok->serialnr ||
+		     !strcmp(match_tok->serialnr, slot->token->serialnr)) &&
+		    (!match_tok->model ||
+		     !strcmp(match_tok->model, slot->token->model))) {
+			found_slot = slot;
+		}
 		if (verbose) {
 			fprintf(stderr, "[%lu] %-25.25s  %-16s",
 				PKCS11_get_slotid_from_slot(slot),
@@ -633,11 +761,20 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		}
 	}
 
-	if (slot_nr == -1) {
+	if (match_tok) {
+		free(match_tok->model);
+		free(match_tok->manufacturer);
+		free(match_tok->serialnr);
+		free(match_tok->label);
+		free(match_tok);
+	}
+	if (found_slot) {
+		slot = found_slot;
+	} else if (match_tok) {
+		fail("specified slot not found\n");
+	} else if (slot_nr == -1) {
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
-	} else if (found_slot) {
-		slot = found_slot;
 	} else {
 		fprintf(stderr, "Invalid slot number: %d\n", slot_nr);
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
