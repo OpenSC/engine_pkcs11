@@ -476,6 +476,14 @@ static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
 		} else if (!strncmp(p, "id=", 3)) {
 			p += 3;
 			rv = parse_uri_attr(p, end - p, (void *)&id, id_len);
+		} else if (!strncmp(p, "type=", 5) || !strncmp(p, "object-type=", 12)) {
+                        p = strchr(p, '=') + 1;
+
+                        if ((end - p == 4 && !strncmp(p, "cert", 4)) ||
+                            (end - p == 7 && !strncmp(p, "private", 7))) {
+                                /* Actually, just ignore it */
+                        } else
+                                rv = 0;
 		} else {
 			rv = 0;
 		}
