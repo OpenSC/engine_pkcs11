@@ -84,6 +84,7 @@
 #define CMD_QUIET		(ENGINE_CMD_BASE+4)
 #define CMD_LOAD_CERT_CTRL	(ENGINE_CMD_BASE+5)
 #define CMD_INIT_ARGS	(ENGINE_CMD_BASE+6)
+#define CMD_RELEASE_KEY	(ENGINE_CMD_BASE+7)
 
 static int pkcs11_engine_destroy(ENGINE * e);
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
@@ -122,6 +123,10 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 	 "INIT_ARGS",
 	 "Specifies additional initialization arguments to the pkcs11 module",
 	 ENGINE_CMD_FLAG_STRING},
+	{CMD_RELEASE_KEY,
+	 "RELEASE_KEY",
+	 "Free given key and associated resources.",
+	 ENGINE_CMD_FLAG_INTERNAL},
 	{0, NULL, NULL, 0}
 };
 
@@ -153,29 +158,13 @@ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 		return load_cert_ctrl(e, p);
 	case CMD_INIT_ARGS:
 		return set_init_args((const char *)p);
+	case CMD_RELEASE_KEY:
+		return release_key((EVP_PKEY *)p);
 	default:
 		break;
 	}
 	return 0;
 }
-
-#if 0
-/* set up default rsa_meth_st with overloaded rsa functions */
-/* the actual implementation needs to be in another object */
-
-static int (*orig_finish) (RSA * rsa);
-
-static int pkcs11_engine_rsa_finish(RSA * rsa)
-{
-
-	pkcs11_rsa_finish(rsa);
-
-	if (orig_finish)
-		orig_finish(rsa);
-	return 1;
-
-}
-#endif
 
 /* This internal function is used by ENGINE_pkcs11() and possibly by the
  * "dynamic" ENGINE support too */
