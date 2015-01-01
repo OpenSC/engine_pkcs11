@@ -48,3 +48,24 @@ into any software supporting PKCS#11.
 Unfortunatelly, OpenSSL does not support PKSC#11 (yet). OpenSSL has the engine
 API only (like Windows have CryproAPI). Therefore the engine_pkcs11 exists
 which encapsulated PKCS#11 into the OpenSSL engine API.
+
+## OpenSSL Configuration
+
+To configure OpenSSL to know about the engine and to use OpenSC PKCS#11 module
+by the engine_pkcs11, you add something like this into your global OpenSSL
+configuration file (``/etc/ssl/openssl.cnf`` probably):
+
+```
+[engine_section]
+pkcs11 = pkcs11_section
+
+[pkcs11_section]
+engine_id = pkcs11
+dynamic_path = /usr/lib/engines/engine_pkcs11.so
+MODULE_PATH = /usr/lib/opensc-pkcs11.so
+init = 0
+```
+
+The dynamic_path value is the engine_pkcs11 plug-in, the MODULE_PATH value is
+the OpenSC PKCS#11 plug-in. The engine_id value is an arbitrary identifier for
+OpenSSL applications to select the engine by the identifier.
