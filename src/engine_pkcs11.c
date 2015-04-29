@@ -530,13 +530,11 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		}
 		if (!n) {
 			fprintf(stderr,
-				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label> or a PKCS#11 URI\n");
+				"The certificate ID should be a valid PKCS#11 URI as\n");
 			fprintf(stderr,
-				"where <slot> is the slot number as normal integer,\n");
+				"defined by RFC7512. The legacy ENGINE_pkcs11 ID format\n");
 			fprintf(stderr,
-				"and <id> is the id number as hex string.\n");
-			fprintf(stderr,
-				"and <label> is the textual key label string.\n");
+				"is also still accepted for now.\n");
 			return NULL;
 		}
 		if (verbose) {
@@ -718,13 +716,11 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 
 		if (!n) {
 			fprintf(stderr,
-				"supported formats: <id>, <slot>:<id>, id_<id>, slot_<slot>-id_<id>, label_<label>, slot_<slot>-label_<label> or a PKCS#11 URI\n");
+				"The key ID should be a valid PKCS#11 URI as defined by\n");
 			fprintf(stderr,
-				"where <slot> is the slot number as normal integer,\n");
+				"RFC7512. The legacy ENGINE_pkcs11 ID format is also\n");
 			fprintf(stderr,
-				"and <id> is the id number as hex string.\n");
-			fprintf(stderr,
-				"and <label> is the textual key label string.\n");
+				"still accepted for now.\n");
 			return NULL;
 		}
 		if (verbose) {
