@@ -191,12 +191,6 @@ static int bind_helper(ENGINE * e)
 #ifndef OPENSSL_NO_RSA
 	    !ENGINE_set_RSA(e, PKCS11_get_rsa_method()) ||
 #endif
-#ifndef OPENSSL_NO_DSA
-	    !ENGINE_set_DSA(e, DSA_get_default_method()) ||
-#endif
-#ifndef OPENSSL_NO_DH
-	    !ENGINE_set_DH(e, DH_get_default_method()) ||
-#endif
 #ifndef OPENSSL_NO_EC
 #ifndef OPENSSL_NO_ECDSA
 		!ENGINE_set_ECDSA(e, PKCS11_get_ecdsa_method()) ||
@@ -204,10 +198,6 @@ static int bind_helper(ENGINE * e)
 /* TODO add ECDH 
 		!ENGINE_set_ECDH(e, PKCS11_get_ecdh_method()) ||
 */
-#endif
-	    !ENGINE_set_RAND(e, RAND_SSLeay()) ||
-#if 0
-	    !ENGINE_set_BN_mod_exp(e, BN_mod_exp) ||
 #endif
 	    !ENGINE_set_load_pubkey_function(e, pkcs11_load_public_key) ||
 	    !ENGINE_set_load_privkey_function(e, pkcs11_load_private_key)) {
