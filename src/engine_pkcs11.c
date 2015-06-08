@@ -59,6 +59,7 @@ static int verbose = 0;
 static char *module = NULL;
 
 static char *init_args = NULL;
+static int init_flags = 0;
 
 int set_module(const char *modulename)
 {
@@ -152,6 +153,12 @@ int set_init_args(const char *init_args_orig)
 	return 1;
 }
 
+int set_init_flags(int flags)
+{
+	init_flags = flags;
+	return 1;
+}
+
 int pkcs11_finish(ENGINE * engine)
 {
 	if (ctx) {
@@ -180,7 +187,8 @@ int pkcs11_init(ENGINE * engine)
 		fprintf(stderr, "initializing engine\n");
 	}
 	ctx = PKCS11_CTX_new();
-        PKCS11_CTX_init_args(ctx, init_args);
+	PKCS11_CTX_init_args(ctx, init_args);
+	PKCS11_CTX_init_flags(ctx, init_flags);
 	if (PKCS11_CTX_load(ctx, mod) < 0) {
 		fprintf(stderr, "unable to load module %s\n", mod);
 		return 0;

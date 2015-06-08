@@ -38,6 +38,7 @@ int set_module(const char *modulename);
 int set_pin(const char *pin);
 
 int set_init_args(const char *init_args_orig);
+int set_init_flags(int);
 
 int load_cert_ctrl(ENGINE * e, void *p);
 

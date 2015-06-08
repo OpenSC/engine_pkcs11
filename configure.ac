@@ -116,7 +116,7 @@ PKG_CHECK_MODULES(
 	[]
 )
 
-PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.5],, [AC_MSG_ERROR([libp11 >= 0.2.5 is required])])
+PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.9],, [AC_MSG_ERROR([libp11 >= 0.2.9 is required])])
 
 PKG_CHECK_MODULES(
 	[OPENSSL],
