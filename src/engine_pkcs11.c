@@ -437,12 +437,13 @@ static int parse_uri_attr(const char *attr, int attrlen, unsigned char **field,
 
 static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
 			    unsigned char *id, size_t *id_len,
+			    char *pin, size_t *pin_len,
 			    char **label)
 {
 	PKCS11_TOKEN *tok;
 	char *newlabel = NULL;
 	const char *end, *p;
-	int rv = 1;
+	int rv = 1, pin_set = 0;
 
 	tok = calloc(1, sizeof(*tok));
 	if (!tok) {
@@ -476,6 +477,10 @@ static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
 		} else if (!strncmp(p, "id=", 3)) {
 			p += 3;
 			rv = parse_uri_attr(p, end - p, (void *)&id, id_len);
+		} else if (!strncmp(p, "pin-value=", 10)) {
+			p += 10;
+			rv = parse_uri_attr(p, end - p, (void *)&pin, pin_len);
+			pin_set = 1;
 		} else if (!strncmp(p, "type=", 5) || !strncmp(p, "object-type=", 12)) {
                         p = strchr(p, '=') + 1;
 
@@ -487,6 +492,10 @@ static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
 		} else {
 			rv = 0;
 		}
+	}
+
+	if (!pin_set) {
+		*pin_len = 0;
 	}
 
 	if (rv) {
@@ -517,13 +526,23 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	unsigned char cert_id[MAX_VALUE_LEN / 2];
 	size_t cert_id_len = sizeof(cert_id);
 	char *cert_label = NULL;
+	char tmp_pin[MAX_PIN_LENGTH];
+	size_t tmp_pin_len = sizeof(tmp_pin);
 	int slot_nr = -1;
 	char flags[64];
 
 	if (s_slot_cert_id && *s_slot_cert_id) {
 		if (!strncmp(s_slot_cert_id, "pkcs11:", 7)) {
 			n = parse_pkcs11_uri(s_slot_cert_id, &match_tok,
-					     cert_id, &cert_id_len, &cert_label);
+					     cert_id, &cert_id_len,
+					     tmp_pin, &tmp_pin_len, &cert_label);
+			if (n && tmp_pin_len > 0 && tmp_pin[0] != 0) {
+				pin = calloc(MAX_PIN_LENGTH, sizeof(char));
+				if (pin != NULL) {
+					memcpy(pin, tmp_pin, tmp_pin_len);
+					pin_length = tmp_pin_len;
+				}
+			}
 		} else {
 			n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
 						 cert_id, &cert_id_len, &cert_label);
@@ -703,12 +722,23 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	size_t key_id_len = sizeof(key_id);
 	char *key_label = NULL;
 	int slot_nr = -1;
+	char tmp_pin[MAX_PIN_LENGTH];
+	size_t tmp_pin_len = sizeof(tmp_pin);
 	char flags[64];
 
 	if (s_slot_key_id && *s_slot_key_id) {
 		if (!strncmp(s_slot_key_id, "pkcs11:", 7)) {
 			n = parse_pkcs11_uri(s_slot_key_id, &match_tok,
-					     key_id, &key_id_len, &key_label);
+					     key_id, &key_id_len,
+					     tmp_pin, &tmp_pin_len, &key_label);
+
+			if (n && tmp_pin_len > 0 && tmp_pin[0] != 0) {
+				pin = calloc(MAX_PIN_LENGTH, sizeof(char));
+				if (pin != NULL) {
+					memcpy(pin, tmp_pin, tmp_pin_len);
+					pin_length = tmp_pin_len;
+				}
+			}
 		} else {
 			n = parse_slot_id_string(s_slot_key_id, &slot_nr,
 						 key_id, &key_id_len, &key_label);
