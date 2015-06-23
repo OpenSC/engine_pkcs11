@@ -543,18 +543,26 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 					pin_length = tmp_pin_len;
 				}
 			}
+
+			if (!n) {
+				fprintf(stderr,
+					"The certificate ID is not a valid PKCS#11 URI as\n");
+				fprintf(stderr,
+					"defined by RFC7512.\n");
+				return NULL;
+			}
 		} else {
 			n = parse_slot_id_string(s_slot_cert_id, &slot_nr,
 						 cert_id, &cert_id_len, &cert_label);
-		}
-		if (!n) {
-			fprintf(stderr,
-				"The certificate ID should be a valid PKCS#11 URI as\n");
-			fprintf(stderr,
-				"defined by RFC7512. The legacy ENGINE_pkcs11 ID format\n");
-			fprintf(stderr,
-				"is also still accepted for now.\n");
-			return NULL;
+			if (!n) {
+				fprintf(stderr,
+					"The certificate ID should be a valid PKCS#11 URI as\n");
+					fprintf(stderr,
+					"defined by RFC7512. The legacy ENGINE_pkcs11 ID format\n");
+				fprintf(stderr,
+					"is also still accepted for now.\n");
+				return NULL;
+			}
 		}
 		if (verbose) {
 			fprintf(stderr, "Looking in slot %d for certificate: ",
@@ -739,20 +747,29 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 					pin_length = tmp_pin_len;
 				}
 			}
+
+			if (!n) {
+				fprintf(stderr,
+					"The key ID is not a valid PKCS#11 URI as defined by\n");
+				fprintf(stderr,
+					"RFC7512.\n");
+				return NULL;
+			}
 		} else {
 			n = parse_slot_id_string(s_slot_key_id, &slot_nr,
 						 key_id, &key_id_len, &key_label);
+
+			if (!n) {
+				fprintf(stderr,
+					"The key ID should be a valid PKCS#11 URI as defined by\n");
+				fprintf(stderr,
+					"RFC7512. The legacy ENGINE_pkcs11 ID format is also\n");
+				fprintf(stderr,
+					"still accepted for now.\n");
+				return NULL;
+			}
 		}
 
-		if (!n) {
-			fprintf(stderr,
-				"The key ID should be a valid PKCS#11 URI as defined by\n");
-			fprintf(stderr,
-				"RFC7512. The legacy ENGINE_pkcs11 ID format is also\n");
-			fprintf(stderr,
-				"still accepted for now.\n");
-			return NULL;
-		}
 		if (verbose) {
 			fprintf(stderr, "Looking in slot %d for key: ",
 				slot_nr);
