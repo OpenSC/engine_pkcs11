@@ -31,6 +31,7 @@
 #include <openssl/crypto.h>
 #include <openssl/objects.h>
 #include <openssl/engine.h>
+#include <openssl/x509v3.h>
 #include <libp11.h>
 #include "engine_pkcs11.h"
 
@@ -39,9 +40,11 @@
 #endif
 
 #define fail(msg) { fprintf(stderr,msg); return NULL;}
+#define fail0(msg) { fprintf(stderr,msg); return 0;}
 
 /** The maximum length of an internally-allocated PIN */
 #define MAX_PIN_LENGTH   32
+#define MAX_MESSAGE_LENGTH 256
 
 static PKCS11_CTX *ctx;
 
@@ -67,6 +70,18 @@ int set_module(const char *modulename)
 	return 1;
 }
 
+
+/* Free PIN storage in secure way. */
+static void free_pin(void)
+{
+	if (pin != NULL) {
+		OPENSSL_cleanse(pin, pin_length);
+		free(pin);
+		pin = NULL;
+		pin_length = 0;
+	}
+}
+
 /**
  * Set the PIN used for login. A copy of the PIN shall be made.
  *
@@ -90,6 +105,7 @@ int set_pin(const char *_pin)
 
 	/* Copy the PIN. If the string cannot be copied, NULL
 	   shall be returned and errno shall be set. */
+	free_pin();
 	pin = strdup(_pin);
 	if (pin != NULL)
 		pin_length = strlen(pin);
@@ -103,36 +119,33 @@ int inc_verbose(void)
 	return 1;
 }
 
-/* either get the pin code from the supplied callback data, or get the pin
- * via asking our self. In both cases keep a copy of the pin code in the
- * pin variable (strdup'ed copy). */
+/* Get the PIN via asking user interface. The supplied call-back data are
+ * passed to the user interface implemented by an application. Only the
+ * application knows how to interpret the call-back data.
+ * A (strdup'ed) copy of the PIN code will be stored in the pin variable. */
 static int get_pin(UI_METHOD * ui_method, void *callback_data)
 {
 	UI *ui;
-	struct {
-		const void *password;
-		const char *prompt_info;
-	} *mycb = callback_data;
-
-	/* pin in the call back data, copy and use */
-	if (mycb != NULL && mycb->password) {
-		pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
-		if (!pin)
-			return 0;
-		strncpy(pin,mycb->password,MAX_PIN_LENGTH);
-		pin_length = MAX_PIN_LENGTH;
-		return 1;
-	}
 
 	/* call ui to ask for a pin */
 	ui = UI_new();
+	if (ui == NULL) {
+		fprintf(stderr, "UI_new failed\n");
+		return 0;
+	}
 	if (ui_method != NULL)
 		UI_set_method(ui, ui_method);
 	if (callback_data != NULL)
-		UI_set_app_data(ui, callback_data);
+		UI_add_user_data(ui, callback_data);
 
+	free_pin();
+	pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+	if (!pin)
+		return 0;
+	pin_length = MAX_PIN_LENGTH;
 	if (!UI_add_input_string
-	    (ui, "PKCS#11 token PIN: ", 0, pin, 1, MAX_PIN_LENGTH)) {
+	    (ui, "PKCS#11 token PIN: ", UI_INPUT_FLAG_DEFAULT_PWD,
+	    pin, 1, MAX_PIN_LENGTH)) {
 		fprintf(stderr, "UI_add_input_string failed\n");
 		UI_free(ui);
 		return 0;
@@ -159,12 +172,7 @@ int pkcs11_finish(ENGINE * engine)
 		PKCS11_CTX_free(ctx);
 		ctx = NULL;
 	}
-	if (pin != NULL) {
-		OPENSSL_cleanse(pin, pin_length);
-		free(pin);
-		pin = NULL;
-		pin_length = 0;
-	}
+	free_pin();
 	return 1;
 }
 
@@ -190,12 +198,7 @@ int pkcs11_init(ENGINE * engine)
 
 int pkcs11_rsa_finish(RSA * rsa)
 {
-	if (pin) {
-		OPENSSL_cleanse(pin, pin_length);
-		free(pin);
-		pin = NULL;
-		pin_length = 0;
-	}
+	free_pin();
 	if (module) {
 		free(module);
 		module = NULL;
@@ -263,17 +266,17 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 		return 0;
 
 	/* support for several formats */
-#define HEXDIGITS "01234567890ABCDEFabcdef"
+#define HEXDIGITS "01234567890ABCDEFabcdef:"
 #define DIGITS "0123456789"
 
-	/* first: pure hex number (id, slot is 0) */
+	/* first: pure hex number (id, slot is undefined) */
 	if (strspn(slot_id, HEXDIGITS) == strlen(slot_id)) {
 		/* ah, easiest case: only hex. */
 		if ((strlen(slot_id) + 1) / 2 > *id_len) {
 			fprintf(stderr, "id string too long!\n");
 			return 0;
 		}
-		*slot = 0;
+		*slot = -1;
 		return hex_to_bin(slot_id, id, id_len);
 	}
 
@@ -304,7 +307,7 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 		return hex_to_bin(slot_id + i, id, id_len);
 	}
 
-	/* third: id_<id>  */
+	/* third: id_<id>, slot is undefined */
 	if (strncmp(slot_id, "id_", 3) == 0) {
 		if (strspn(slot_id + 3, HEXDIGITS) + 3 != strlen(slot_id)) {
 			fprintf(stderr, "could not parse string!\n");
@@ -315,12 +318,13 @@ static int parse_slot_id_string(const char *slot_id, int *slot,
 			fprintf(stderr, "id string too long!\n");
 			return 0;
 		}
-		*slot = 0;
+		*slot = -1;
 		return hex_to_bin(slot_id + 3, id, id_len);
 	}
 
-	/* label_<label>  */
+	/* label_<label>, slot is undefined */
 	if (strncmp(slot_id, "label_", 6) == 0) {
+		*slot = -1;
 		*label = strdup(slot_id + 6);
 		return *label != NULL;
 	}
@@ -537,6 +541,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 					     cert_id, &cert_id_len,
 					     tmp_pin, &tmp_pin_len, &cert_label);
 			if (n && tmp_pin_len > 0 && tmp_pin[0] != 0) {
+				free_pin();
 				pin = calloc(MAX_PIN_LENGTH, sizeof(char));
 				if (pin != NULL) {
 					memcpy(pin, tmp_pin, tmp_pin_len);
@@ -688,13 +693,19 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		fprintf(stderr, "Found %u cert%s:\n", cert_count,
 			(cert_count <= 1) ? "" : "s");
 	}
-	if ((s_slot_cert_id && *s_slot_cert_id) && (cert_id_len != 0)) {
+	if ((s_slot_cert_id && *s_slot_cert_id) && (cert_id_len != 0 || cert_label != NULL)) {
 		for (n = 0; n < cert_count; n++) {
 			PKCS11_CERT *k = certs + n;
 
-			if (cert_id_len != 0 && k->id_len == cert_id_len &&
-			    memcmp(k->id, cert_id, cert_id_len) == 0) {
-				selected_cert = k;
+			if (cert_label == NULL) {
+				if (cert_id_len != 0 && k->id_len == cert_id_len &&
+				    memcmp(k->id, cert_id, cert_id_len) == 0) {
+				    selected_cert = k;
+				}
+			} else {
+				if (strcmp(k->label, cert_label) == 0) {
+				    selected_cert = k;
+				}
 			}
 		}
 	} else {
@@ -730,6 +741,63 @@ int load_cert_ctrl(ENGINE * e, void *p)
 	return 1;
 }
 
+/*
+ * Log-into the token if necesary.
+ *
+ * @slot is PKCS11 slot to log in
+ * @tok is PKCS11 token to log in (??? could be derived as @slot->token)
+ * @ui_method is OpenSSL user inteface which is used to ask for a password
+ * @callback_data are application data to the user interface
+ * @return 1 on success, 0 on error.
+ */
+static int pkcs11_login(PKCS11_SLOT *slot, PKCS11_TOKEN *tok, UI_METHOD *ui_method, void *callback_data)
+{
+	/* Perform login to the token if required */
+	if (tok->loginRequired) {
+		/* If the token has a secure login (i.e., an external keypad),
+		   then use a NULL pin. Otherwise, check if a PIN exists. If
+		   not, allocate and obtain a new PIN. */
+		if (tok->secureLogin) {
+			/* Free the PIN if it has already been
+			   assigned (i.e, cached by get_pin) */
+			free_pin();
+		} else if (pin == NULL) {
+			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
+			pin_length = MAX_PIN_LENGTH;
+			if (pin == NULL) {
+				fail0("Could not allocate memory for PIN\n");
+			}
+			if (!get_pin(ui_method, callback_data) ) {
+				free_pin();
+				fail0("No pin code was entered\n");
+			}
+		}
+
+		/* Now login in with the (possibly NULL) pin */
+		if (PKCS11_login(slot, 0, pin)) {
+			/* Login failed, so free the PIN if present */
+			free_pin();
+			fail0("Login failed\n");
+		}
+		/* Login successful, PIN retained in case further logins are
+		   required. This will occur on subsequent calls to the
+		   pkcs11_load_key function. Subsequent login calls should be
+		   relatively fast (the token should maintain its own login
+		   state), although there may still be a slight performance
+		   penalty. We could maintain state noting that successful
+		   login has been performed, but this state may not be updated
+		   if the token is removed and reinserted between calls. It
+		   seems safer to retain the PIN and peform a login on each
+		   call to pkcs11_load_key, even if this may not be strictly
+		   necessary. */
+		/* TODO when does PIN get freed after successful login? */
+		/* TODO confirm that multiple login attempts do not introduce
+		   significant performance penalties */
+
+	}
+	return 1;
+}
+
 static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 				 UI_METHOD * ui_method, void *callback_data,
 				 int isPrivate)
@@ -756,6 +824,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 					     tmp_pin, &tmp_pin_len, &key_label);
 
 			if (n && tmp_pin_len > 0 && tmp_pin[0] != 0) {
+				free_pin();
 				pin = calloc(MAX_PIN_LENGTH, sizeof(char));
 				if (pin != NULL) {
 					memcpy(pin, tmp_pin, tmp_pin_len);
@@ -918,60 +987,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	}
 
 	/* Perform login to the token if required */
-	if (tok->loginRequired) {
-		/* If the token has a secure login (i.e., an external keypad),
-		   then use a NULL pin. Otherwise, check if a PIN exists. If
-		   not, allocate and obtain a new PIN. */
-		if (tok->secureLogin) {
-			/* Free the PIN if it has already been 
-			   assigned (i.e, cached by get_pin) */
-			if (pin != NULL) {
-				OPENSSL_cleanse(pin, pin_length);
-				free(pin);
-				pin = NULL;
-				pin_length = 0;
-			}
-		} else if (pin == NULL) {
-			pin = (char *)calloc(MAX_PIN_LENGTH, sizeof(char));
-			pin_length = MAX_PIN_LENGTH;
-			if (pin == NULL) {
-				fail("Could not allocate memory for PIN");
-			}
-			if (!get_pin(ui_method, callback_data) ) {
-				OPENSSL_cleanse(pin, pin_length);
-				free(pin);
-				pin = NULL;
-				pin_length = 0;
-				fail("No pin code was entered");
-			}
-		}
-
-		/* Now login in with the (possibly NULL) pin */
-		if (PKCS11_login(slot, 0, pin)) {
-			/* Login failed, so free the PIN if present */
-			if (pin != NULL) {
-				OPENSSL_cleanse(pin, pin_length);
-				free(pin);
-				pin = NULL;
-				pin_length = 0;
-			}
-			fail("Login failed\n");
-		}
-		/* Login successful, PIN retained in case further logins are 
-		   required. This will occur on subsequent calls to the
-		   pkcs11_load_key function. Subsequent login calls should be
-		   relatively fast (the token should maintain its own login
-		   state), although there may still be a slight performance 
-		   penalty. We could maintain state noting that successful
-		   login has been performed, but this state may not be updated
-		   if the token is removed and reinserted between calls. It
-		   seems safer to retain the PIN and peform a login on each
-		   call to pkcs11_load_key, even if this may not be strictly
-		   necessary. */
-		/* TODO when does PIN get freed after successful login? */
-		/* TODO confirm that multiple login attempts do not introduce
-		   significant performance penalties */
-
+	if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
+		return NULL;
 	}
 
 	/* Make sure there is at least one private key on the token */
@@ -1047,4 +1064,258 @@ EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 	if (pk == NULL)
 		fail("PKCS11_get_private_key returned NULL\n");
 	return pk;
+}
+
+/*
+ * Return true if certificate issuer is listed in X509_NAME stack or if the
+ * stack is empty. Return false otherwise.
+ *
+ * @cert is a valid PKCS11 certificate
+ * @issuer_dns is a possibly empty stack of issuer names
+ */
+static int pkcs11_cert_issuer_matches(PKCS11_CERT *cert, STACK_OF(X509_NAME) *issuer_dns)
+{
+	int count;
+	int i;
+
+	if (NULL == issuer_dns)
+		return 1;
+	count = sk_X509_NAME_num(issuer_dns);
+	if (count <= 0)
+		return 1;
+	for (i = 0; i < count; i++) {
+		if (!X509_NAME_cmp(
+				sk_X509_NAME_value(issuer_dns, i),
+				X509_get_issuer_name(cert->x509)))
+			return 1;
+	}
+	return 0;
+}
+
+
+/*
+ * Check if certificate can be used by an SSL client.
+ *
+ * @cert is a valid PKCS11 certificate.
+ * @return 1 if the certificate purpose allowes that.
+ * @return 0 if the certificate purpose prohibits that.
+ * @return -1 in case of an error.
+ */
+static int pkcs11_cert_is_for_ssl_client(PKCS11_CERT *cert)
+{
+	/* XXX: We have to work on a temporary copy because
+	 * X509_check_purpose() modified the X509. */
+	X509 *copy = X509_dup(cert->x509);
+	int suitable;
+
+	if (NULL == copy)
+		return -1;
+	suitable = X509_check_purpose(copy, X509_PURPOSE_SSL_CLIENT, 0);
+	X509_free(copy);
+
+	return suitable;
+}
+
+/*
+ * Ask user to select a certificate from array of certificates if more
+ * certificates are listed. Otherwise selects the one certificate without
+ * asking.
+ *
+ * @certs is array of pointers to a PKCS11 certificate
+ * @cerrs_count is number of pointers in the array
+ * @ui_method is user interface to use to ask an user
+ * @callback_data are application data for the user interface
+ * @return selected certificate or NULL in case of an empty list or an error.
+ */
+static PKCS11_CERT *pkcs11_select_certificate(PKCS11_CERT **certs,
+	int certs_count, UI_METHOD *ui_method, void *callback_data)
+{
+	UI *ui;
+	char message[MAX_MESSAGE_LENGTH];
+	int i;
+
+	/* No certificate list */
+	if (NULL == certs || 0 == certs_count)
+		return NULL;
+
+	/* Exactly one certificate */
+	if (1 == certs_count)
+		return certs[0];
+
+	/* More certificates, ask the user */
+	ui = UI_new();
+	if (ui == NULL) {
+		fail("UI_new failed\n");
+	}
+	if (ui_method != NULL)
+		UI_set_method(ui, ui_method);
+	if (callback_data != NULL)
+		UI_add_user_data(ui, callback_data);
+
+	UI_add_info_string(ui, "Available certificates:\n");
+	for (i = 0; i < certs_count; i++) {
+		char *dn = NULL;
+		if (certs[i]->x509)
+			dn = X509_NAME_oneline(X509_get_subject_name
+					       (certs[i]->x509), NULL, 0);
+		snprintf(message, MAX_MESSAGE_LENGTH - 1, "%2u. %s (%s)\n",
+				i + 1, certs[i]->label, dn);
+		message[MAX_MESSAGE_LENGTH-1] = '\0';
+		UI_dup_info_string(ui, message);
+		if (dn) {
+			OPENSSL_free(dn);
+		}
+	}
+
+	message[0] = '\0';
+	if (!UI_add_input_string(ui, "Select certificate by number: ",
+		    UI_INPUT_FLAG_ECHO, message, 0, MAX_MESSAGE_LENGTH-1)) {
+		UI_free(ui);
+		fail("UI_add_input_string failed\n");
+	}
+	if (UI_process(ui)) {
+		UI_free(ui);
+		fail("UI_process failed\n");
+	}
+	UI_free(ui);
+
+	/* Parse the response */
+	i = atoi(message);
+	if (i < 1 || i > certs_count) {
+		fail("Could not select a certificate because of wrong number\n");
+	}
+
+	return certs[i - 1];
+}
+
+/*
+ * This is ENGINE_SSL_CLIENT_CERT_PTR OpenSSL engine call-back used to select
+ * a certificate and a corresponding private key appropriate for SSL client.
+ *
+ * @engine is this engine context
+ * @ssl is current SSL connection in client authentication phase
+ * @ca_dn is stack of certificate authority distinguished names advertised by
+ *	the SSL server. This list constrains certificate to return.
+ * @pcert is a memory to store pointer to selected X509 certificate. Only one
+ *	certificate can be returned.
+ * @pkey us a memory to store pointer to selected private key
+ * @pother has unkown semantics. Not implemented.
+ * @ui_method is an user interface to select certificate by the user if there
+ *	are more certificates available issued by one of @ca_dn.
+ * @return 1 in case of success, otherwise 0.
+ */
+int pkcs11_load_ssl_client_cert(ENGINE *e, SSL *ssl,
+	STACK_OF(X509_NAME) *ca_dn, X509 **pcert, EVP_PKEY **pkey,
+	STACK_OF(X509) **pother, UI_METHOD *ui_method, void *callback_data)
+{
+	PKCS11_SLOT *slot_list, *slot;
+	PKCS11_SLOT *found_slot = NULL;
+	PKCS11_TOKEN *tok;
+	PKCS11_CERT *certs, *selected_cert = NULL;
+	PKCS11_CERT **suitable_certs = NULL;
+	PKCS11_KEY *key;
+	X509 *x509;
+
+	unsigned int slot_count, cert_count, n, suitable_certs_count;
+
+	if (NULL != pcert)
+	    *pcert = NULL;
+	if (NULL != pkey)
+	    *pkey = NULL;
+	if (NULL != pother)
+	    *pother = NULL;
+
+	if (NULL == e)
+	    return 0;
+
+	/* Enumerate certificates */
+	if (PKCS11_enumerate_slots(ctx, &slot_list, &slot_count) < 0)
+		fail0("failed to enumerate slots\n");
+	if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count))) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		fail0("didn't find any tokens\n");
+	}
+	tok = slot->token;
+	if (tok == NULL) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		fail0("Found empty token\n");
+	}
+
+	if (PKCS11_enumerate_certs(tok, &certs, &cert_count)) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		fail0("unable to enumerate certificates\n");
+	}
+
+	/* Select suitable certificates */
+	suitable_certs = malloc(cert_count * sizeof(*suitable_certs));
+	if (NULL == suitable_certs) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		fail0("not enough memory to select certificates\n");
+	}
+
+	for (n = 0, suitable_certs_count = 0; n < cert_count; n++) {
+		PKCS11_CERT *k = certs + n;
+		if (pkcs11_cert_issuer_matches(k, ca_dn)) {
+			int suitable = pkcs11_cert_is_for_ssl_client(k);
+			/* ???: Exclude expired certificates */
+			if (1 == suitable) {
+				/* Suitable certificate found */
+				suitable_certs[suitable_certs_count++] = k;
+			} else if (0 != suitable) {
+				free(suitable_certs);
+				PKCS11_release_all_slots(ctx, slot_list,
+					    slot_count);
+				fail0("Error while checking a certificate is "
+					"allowed for an SSL client\n");
+			}
+		}
+	}
+
+	/* Let user to select if more certificates are suitable */
+	selected_cert = pkcs11_select_certificate(suitable_certs, suitable_certs_count,
+			ui_method, callback_data);
+	free(suitable_certs);
+
+	/* Store selected certificate */
+	if (NULL == selected_cert) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		fail0("No suitable certificate found\n");
+	}
+	if (NULL != pcert) {
+		*pcert = X509_dup(selected_cert->x509);
+		if (NULL == *pcert) {
+			PKCS11_release_all_slots(ctx, slot_list, slot_count);
+			fail0("could not copy selected certificate\n");
+		}
+	}
+
+	if (NULL == pkey) {
+	    /* No private key requested by an application */
+	    PKCS11_release_all_slots(ctx, slot_list, slot_count);
+	    return (1);
+	}
+
+	/* Find a private key corresponding to the certificate */
+	if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		if (NULL != *pcert) {
+			X509_free(*pcert);
+			*pcert = NULL;
+		}
+		fail0("could not log in to access private key corresponding to selected certificate\n");
+	}
+	key = PKCS11_find_key(selected_cert);
+	if (NULL == key) {
+		PKCS11_release_all_slots(ctx, slot_list, slot_count);
+		if (NULL != *pcert) {
+			X509_free(*pcert);
+			*pcert = NULL;
+		}
+		fail0("could not find private key corresponding to selected certificate\n");
+	}
+	/* ???: Duplicate EVP_PKEY as the X509 */
+	*pkey = PKCS11_get_private_key(key);
+
+	PKCS11_release_all_slots(ctx, slot_list, slot_count);
+	return (1);
 }

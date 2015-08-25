@@ -260,6 +260,7 @@ AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/versioninfo.rc
+	test/Makefile
 ])
 AC_OUTPUT
 
