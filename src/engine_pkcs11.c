@@ -663,6 +663,21 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		fprintf(stderr, "Found token: %s\n", slot->token->label);
 	}
 
+	/* In several tokens certificates are marked as private. We use the pin-value */
+	if (tok->loginRequired && pin) {
+		/* Now login in with the (possibly NULL) pin */
+		if (PKCS11_login(slot, 0, pin)) {
+			/* Login failed, so free the PIN if present */
+			if (pin != NULL) {
+				OPENSSL_cleanse(pin, pin_length);
+				free(pin);
+				pin = NULL;
+				pin_length = 0;
+			}
+			fail("Login failed\n");
+		}
+	}
+
 	if (PKCS11_enumerate_certs(tok, &certs, &cert_count)) {
 		fprintf(stderr, "unable to enumerate certificates\n");
 		PKCS11_release_all_slots(ctx, slot_list, slot_count);
