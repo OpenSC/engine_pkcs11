@@ -23,7 +23,7 @@ file_dir="${srcdir:-./}"
 
 # This uses the engine for basic sign-verify operation.
 
-sed -e "s|@MODULE_PATH@|${ADDITIONAL_PARAM}|g" -e "s|@ENGINE_PATH@|../src/.libs/engine_pkcs11.so|g" <"${srcdir}/engines.cnf.in" >engines.cnf
+sed -e "s|@MODULE_PATH@|${ADDITIONAL_PARAM}|g" -e "s|@ENGINE_PATH@|../src/.libs/libpkcs11.so|g" <"${srcdir}/engines.cnf.in" >engines.cnf
 
 export OPENSSL_ENGINES="../src/.libs/"
 
