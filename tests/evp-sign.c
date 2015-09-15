@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 	unsigned char buf[4096];
 	const EVP_MD *digest_algo;
 	EVP_PKEY *private_key, *pubkey;
-	char *key_pass;
+	char *key_pass = NULL;
 	X509 *x509;
 	unsigned n;
 	int ret;
@@ -71,20 +71,22 @@ int main(int argc, char **argv)
 	ENGINE *e;
 	CONF *conf;
 	EVP_MD_CTX ctx;
-	const char *module_path;
+	const char *module_path, *efile;
 	BIO *in, *b;
 
-	if (argc < 4) {
-		fprintf(stderr, "usage: %s [CONF] [private key URL] [module]\n", argv[0]);
+	if (argc < 5) {
+		fprintf(stderr, "usage: %s [PIN] [CONF] [private key URL] [module]\n", argv[0]);
 		exit(1);
 	}
 
-	private_key_name = argv[2];
-	module_path = argv[3];
+	key_pass = argv[1];
+	private_key_name = argv[3];
+	module_path = argv[4];
+	efile = argv[2];
 
-	ret = CONF_modules_load_file(argv[1], "engines", 0);
+	ret = CONF_modules_load_file(efile, "engines", 0);
 	if (ret <= 0) {
-		fprintf(stderr, "cannot load %s\n", argv[1]);
+		fprintf(stderr, "cannot load %s\n", efile);
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
@@ -111,12 +113,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-#if 0
-	if (!ENGINE_ctrl_cmd_string(e, "PIN", key_pass, 0)) {
+	if (key_pass && !ENGINE_ctrl_cmd_string(e, "PIN", key_pass, 0)) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
-#endif
 
 	private_key = ENGINE_load_private_key(e, private_key_name, NULL, NULL);
 	if (!private_key) {
