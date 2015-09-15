@@ -27,13 +27,13 @@ sed -e "s|@MODULE_PATH@|${ADDITIONAL_PARAM}|g" -e "s|@ENGINE_PATH@|../src/.libs/
 
 export OPENSSL_ENGINES="../src/.libs/"
 
-./evp-sign false engines.cnf "pkcs11:model=SoftHSM%20v2;manufacturer=SoftHSM%20project;token=libp11-test;id=%00%01%02%03;object=server-key;type=private;pin-value=1234" ${ADDITIONAL_PARAM}
+./evp-sign false engines.cnf "pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private;pin-value=1234" ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test failed"
 	exit 1;
 fi
 
-./evp-sign 1234 engines.cnf "pkcs11:model=SoftHSM%20v2;manufacturer=SoftHSM%20project;token=libp11-test;id=%00%01%02%03;object=server-key;type=private" ${ADDITIONAL_PARAM}
+./evp-sign 1234 engines.cnf "pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private" ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test without pin-value failed"
 	exit 1;
