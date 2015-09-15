@@ -118,6 +118,13 @@ PKG_CHECK_MODULES(
 
 PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.5],, [AC_MSG_ERROR([libp11 >= 0.2.5 is required])])
 
+saved_LIBS=$LIBS
+LIBS="$LIBP11_LIBS"
+AC_CHECK_LIB(p11, PKCS11_ecdsa_method_free, [], [
+AC_DEFINE([OPENSSL_NO_ECDSA], [], [ECDSA support was not detected in libp11])
+])
+LIBS=$saved_LIBS
+
 PKG_CHECK_MODULES(
 	[OPENSSL],
 	[libcrypto >= 0.9.7],
