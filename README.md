@@ -1,3 +1,8 @@
+# Build state
+
+[![Build Status](https://travis-ci.org/OpenSC/engine_pkcs11.png)](https://travis-ci.org/OpenSC/engine_pkcs11)
+
+
 # OpenSSL engine for PKCS#11 modules
 
 engine_pkcs11 is a plug-in for the OpenSSL
