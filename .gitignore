@@ -20,7 +20,10 @@ missing
 mkinstalldirs
 so_locations
 stamp-h*
-
+test-driver
+tests/evp-sign
+*.trs
+*.log
 .deps
 .libs
 .#*#

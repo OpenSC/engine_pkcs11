@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Copyright (C) 2015 Nikos Mavrogiannopoulos
+#
+# GnuTLS is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at
+# your option) any later version.
+#
+# GnuTLS is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GnuTLS; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+outdir="${srcdir}/output.$$"
+file_dir="${srcdir:-./}"
+
+. ${srcdir}/common.sh
+
+# This uses the engine for basic sign-verify operation.
+
+sed -e "s|@MODULE_PATH@|${ADDITIONAL_PARAM}|g" -e "s|@ENGINE_PATH@|../src/.libs/engine_pkcs11.so|g" <"${srcdir}/engines.cnf.in" >engines.cnf
+
+export OPENSSL_ENGINES="../src/.libs/"
+
+./evp-sign engines.cnf "pkcs11:model=SoftHSM%20v2;manufacturer=SoftHSM%20project;token=libp11-test;id=%00%01%02%03;object=server-key;type=private;pin-value=1234" ${ADDITIONAL_PARAM}
+if test $? != 0;then
+	echo "Basic PKCS #11 test test failed"
+	exit 1;
+fi
+
+rm -rf "$outdir"
+rm -f engines.cnf
+
+exit 0
