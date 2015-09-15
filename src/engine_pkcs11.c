@@ -651,7 +651,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	if (found_slot) {
 		slot = found_slot;
 	} else if (match_tok) {
-		fail("specified slot not found\n");
+		fail("specified object not found\n");
 	} else if (slot_nr == -1) {
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
@@ -922,7 +922,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	if (found_slot) {
 		slot = found_slot;
 	} else if (match_tok) {
-		fail("specified slot not found\n");
+		fail("specified object not found\n");
 	} else if (slot_nr == -1) {
 		if (!(slot = PKCS11_find_token(ctx, slot_list, slot_count)))
 			fail("didn't find any tokens\n");
