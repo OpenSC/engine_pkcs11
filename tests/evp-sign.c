@@ -138,13 +138,14 @@ int main(int argc, char **argv)
 		BIO_reset(b);
 		x509 = PEM_read_bio_X509(b, NULL, NULL, NULL);	/* PEM encoded X.509 */
 	}
-	BIO_free(b);
 
 	if (!x509) {
 		fprintf(stderr, "error loading cert %s\n", x509_name);
 		exit(1);
 	}
 	pubkey = X509_get_pubkey(x509);
+
+	BIO_free(b);
 
 	/* Digest the module data. */
 	OpenSSL_add_all_digests();
@@ -193,6 +194,9 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	EVP_PKEY_free(pubkey);
+	EVP_PKEY_free(private_key);
+	ENGINE_finish(e);
 	CONF_modules_unload(1);
 	return 0;
 }
