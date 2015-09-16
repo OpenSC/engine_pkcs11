@@ -2,8 +2,13 @@
 
 [![Build Status](https://travis-ci.org/OpenSC/engine_pkcs11.png)](https://travis-ci.org/OpenSC/engine_pkcs11)
 
+# Submitting pull requests
 
-# OpenSSL engine for PKCS#11 modules
+For adding new features or extending functionality in addition to the code,
+please submit a test program which verifies the correctness of operation.
+See tests/ for the existing test suite.
+
+# About engine_pkcs11: an OpenSSL engine for PKCS#11 modules
 
 engine_pkcs11 is a plug-in for the OpenSSL
 
@@ -74,3 +79,5 @@ init = 0
 The dynamic_path value is the engine_pkcs11 plug-in, the MODULE_PATH value is
 the OpenSC PKCS#11 plug-in. The engine_id value is an arbitrary identifier for
 OpenSSL applications to select the engine by the identifier.
+
+
