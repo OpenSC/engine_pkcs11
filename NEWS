@@ -1,6 +1,6 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
-New in 0.2.0; unreleased; Nikos Mavrogiannopoulos
+New in 0.2.0; 2015-10-09; Nikos Mavrogiannopoulos
 * Added support for ECDSA when compiled with libp11 0.3.0
   (Douglas E. Engert)
 * Updated engine name to match other openssl engines
