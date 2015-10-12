@@ -18,7 +18,7 @@ EXTRA_DIST = .gitignore
 SUBDIRS = src tests
 
 dist_noinst_SCRIPTS = bootstrap
-dist_doc_DATA = NEWS
+dist_doc_DATA = NEWS README.md
 
 # Allow detection of packaged tarball
 dist-hook:
