@@ -158,6 +158,7 @@ static int get_pin(UI_METHOD * ui_method, void *callback_data)
 
 int set_init_args(const char *init_args_orig)
 {
+	free(init_args);
 	init_args = init_args_orig ? strdup(init_args_orig) : NULL;
 	return 1;
 }
