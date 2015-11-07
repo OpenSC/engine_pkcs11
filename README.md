@@ -47,6 +47,14 @@ for more information.
 
 # PKCS #11 module configuration
 
+## Copying the engine shared object to the proper location
+
+OpenSSL has a location where engine shared objects can be placed
+and they will be automatically loaded when requested. It is recommended
+to copy engine_pkcs11 at that location as libpkcs11.so to ease usage.
+This is handle by 'make install' of engine_pkcs11.
+
+
 ## OpenSSL configuration file
 To configure OpenSSL to know about the engine and to use OpenSC PKCS#11 module
 by the engine_pkcs11, you add something like this into your global OpenSSL
@@ -67,13 +75,97 @@ The dynamic_path value is the engine_pkcs11 plug-in, the MODULE_PATH value is
 the OpenSC PKCS#11 plug-in. The engine_id value is an arbitrary identifier for
 OpenSSL applications to select the engine by the identifier.
 
+To verify that the engine is properly operating you can use the following example.
+
+```
+$ openssl engine pkcs11 -t
+(pkcs11) pkcs11 engine
+     [ available ]
+```
+
+## Using the engine from the command line tool
+
+This section demonstrates how to use the command line tool to create a self signed
+certificate for "Andreas Jellinghaus". The key of the certificate will be generated
+in the token and will not exportable.
+
+For the examples that follow, we need to generate a private key in the token and
+obtain its private key URL. The following commands utilize p11tool for that.
+```
+$ p11tool --provider /usr/lib/opensc-pkcs11.so --login --generate-rsa --bits 1024 --label test-key
+$ p11tool --provider /usr/lib/opensc-pkcs11.so --list-privkeys --login
+```
+
+Note the PKCS #11 URL shown above and use it in the commands below.
+
+To generate a certificate with its key in the PKCS #11 module, the following commands commands
+can be used. This example loads engine_pkcs11 with the PKCS#11 module opensc-pkcs11.so. The
+second command creates a self signed Certificate for "Andreas Jellinghaus". The signing is done
+using the key specified by the URL. The third command creates a self-signed certificate for the
+request, the private key used to sign the certificate is the same private key used to create the
+request. Note that in a PKCS #11 URL you can specify the PIN using the "pin-value" attribute.
+
+```
+$ openssl
+OpenSSL> engine -t dynamic -pre SO_PATH:/usr/lib/engines/libpkcs11.so \
+         -pre ID:pkcs11 -pre LIST_ADD:1 -pre LOAD \
+         -pre MODULE_PATH:/usr/lib/opensc-pkcs11.so
+OpenSSL> req -engine pkcs11 -new -key "pkcs11:object=test-key;type=private;pin-value=XXXX" \
+         -keyform engine -out req.pem -text -x509 -subj "/CN=Andreas Jellinghaus"
+OpenSSL> x509 -engine pkcs11 -signkey "pkcs11:object=test-key;type=private;pin-value=XXXX" \
+         -keyform engine -in req.pem -out cert.pem
+```
+
+
+You can also create/edit an openssl config file, so you don't need to type in or paste the above commands
+all the time. Here is an example for OpenSSL 0.9.8:
+
+```
+openssl_conf            = openssl_def
+
+[openssl_def]
+engines = engine_section
+
+[engine_section]
+pkcs11 = pkcs11_section
+
+[pkcs11_section]
+engine_id = pkcs11
+dynamic_path = /usr/lib/engines/engine_pkcs11.so
+MODULE_PATH = /usr/lib/opensc-pkcs11.so
+init = 0
+
+[req]
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+```
+
+With such a config file you can directly call openssl to use that engine:
+
+```
+openssl req -config openssl.conf -engine pkcs11 -new -key "pkcs11:object=test-key" \
+        -keyform engine -out req.pem -text -x509 \
+        -subj "/CN=Andreas Jellinghaus"
+```
+
 ## Engine controls
 
-A specific module can be specified using the following call.
+The supported engine controls are the following.
+
+* **SO_PATH**: Specifies the path to the 'pkcs11-engine' shared library 
+* **MODULE_PATH**: Specifies the path to the pkcs11 module shared library 
+* **PIN**: Specifies the pin code 
+* **VERBOSE**: Print additional details 
+* **QUIET**: Do not print additional details 
+* **LOAD_CERT_CTRL**: Load a certificate from token
+
+An example code snippet setting specific module is shown below..
 
 ```
 ENGINE_ctrl_cmd(engine, "MODULE_PATH",
 		0, "/path/to/pkcs11module.so", NULL, 1);
+```
 
 ## p11-kit
 
