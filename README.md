@@ -55,6 +55,12 @@ to copy engine_pkcs11 at that location as libpkcs11.so to ease usage.
 This is handle by 'make install' of engine_pkcs11.
 
 
+## Using in systems with p11-kit
+
+In systems with p11-kit-proxy engine_pkcs11 has access to all the configured
+PKCS #11 modules and requires no further configuration.
+
+
 ## Using in systems without p11-kit
 
 In systems without p11-kit-proxy you need to configure OpenSSL to know about
@@ -143,17 +149,15 @@ The supported engine controls are the following.
 * **QUIET**: Do not print additional details 
 * **LOAD_CERT_CTRL**: Load a certificate from token
 
-An example code snippet setting specific module is shown below..
+An example code snippet setting specific module is shown below.
 
 ```
 ENGINE_ctrl_cmd(engine, "MODULE_PATH",
 		0, "/path/to/pkcs11module.so", NULL, 1);
 ```
 
-## p11-kit
-
-No action is required to load modules enabled in p11-kit. In that case objects must
-be referred to, using the PKCS #11 URL.
+In systems with p11-kit, if this engine control is not called engine_pkcs11
+defaults to loading the p11-kit proxy module.
 
 
 # Developer information
