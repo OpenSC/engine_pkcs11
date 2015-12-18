@@ -487,10 +487,13 @@ static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
                         p = strchr(p, '=') + 1;
 
                         if ((end - p == 4 && !strncmp(p, "cert", 4)) ||
+                            (end - p == 6 && !strncmp(p, "public", 6)) ||
                             (end - p == 7 && !strncmp(p, "private", 7))) {
                                 /* Actually, just ignore it */
-                        } else
+                        } else {
+				fprintf(stderr, "Unknown object type\n");
                                 rv = 0;
+			}
 		} else {
 			rv = 0;
 		}
