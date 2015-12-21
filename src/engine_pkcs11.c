@@ -981,7 +981,8 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	}
 
 	/* Perform login to the token if required */
-	if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
+	if (isPrivate && tok->loginRequired && !pkcs11_login(slot, tok, ui_method, callback_data)) {
+		fprintf(stderr, "login to token needed, but failed...\n");
 		return NULL;
 	}
 
@@ -1031,7 +1032,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	} else {
 		/*pk = PKCS11_get_public_key(&keys[0]);
 		   need a get_public_key? */
-		pk = PKCS11_get_private_key(selected_key);
+		pk = PKCS11_get_public_key(selected_key);
 	}
 	if (key_label != NULL)
 		free(key_label);
