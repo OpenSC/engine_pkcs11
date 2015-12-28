@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = \
 	$(srcdir)/Makefile.in $(srcdir)/versioninfo.rc
-EXTRA_DIST = Makefile.mak
+EXTRA_DIST = Makefile.mak versioninfo.rc.in
 
 engines_LTLIBRARIES = libpkcs11.la
 
