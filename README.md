@@ -1,7 +1,7 @@
 # Build state
 
 [![Build Status](https://travis-ci.org/OpenSC/engine_pkcs11.png)](https://travis-ci.org/OpenSC/engine_pkcs11)
-
+[![Build status](https://ci.appveyor.com/api/projects/status/v1dd09ax199m0ev3?svg=true)](https://ci.appveyor.com/project/LudovicRousseau/engine-pkcs11)
 
 # engine_pkcs11: an OpenSSL engine for PKCS#11 modules
 
