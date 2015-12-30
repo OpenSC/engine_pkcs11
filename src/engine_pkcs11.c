@@ -1009,7 +1009,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	} else {
 	  
 	  /* Make sure there is at least one public key on the token */
-	  if (PKCS11_enumerate_pubkeys(tok, &keys, &key_count)) {
+	  if (PKCS11_enumerate_public_keys(tok, &keys, &key_count)) {
 	    fail("unable to enumerate public keys\n");
 	  }
 	  if (key_count == 0) {
