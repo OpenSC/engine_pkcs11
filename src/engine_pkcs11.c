@@ -811,6 +811,11 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	size_t tmp_pin_len = sizeof(tmp_pin);
 	char flags[64];
 
+	if (verbose)
+		fprintf(stderr, "pkcs11_load_key(...,\"%s\",...,...,%s)\n",
+			s_slot_key_id,
+			(char *)(isPrivate?"Private":"Public")
+		);
 	if (s_slot_key_id && *s_slot_key_id) {
 		if (!strncmp(s_slot_key_id, "pkcs11:", 7)) {
 			n = parse_pkcs11_uri(s_slot_key_id, &match_tok,
@@ -941,10 +946,10 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		return NULL;
 	}
 /* Removed for interop with some other pkcs11 libs. */
-#if 0
+#if 1
 	if (!tok->initialized) {
 		fprintf(stderr, "Found uninitialized token; \n");
-		return NULL;
+		//return NULL;
 	}
 #endif
 	if (isPrivate && !tok->userPinSet && !tok->readOnly) {
@@ -980,23 +985,43 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		}
 	}
 
-	/* Perform login to the token if required */
-	if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
-		return NULL;
-	}
 
-	/* Make sure there is at least one private key on the token */
-	if (PKCS11_enumerate_keys(tok, &keys, &key_count)) {
-		fail("unable to enumerate keys\n");
-	}
-	if (key_count == 0) {
-		fail("No keys found.\n");
-	}
+	if (isPrivate) {
+	  
+	  /* Perform login to the token if required */
+	  if (!pkcs11_login(slot, tok, ui_method, callback_data)) {
+	    fprintf(stderr, "login to token failed, returning NULL...\n");
+	    return NULL;
+	  }
 
-	if (verbose) {
-		fprintf(stderr, "Found %u key%s:\n", key_count,
-			(key_count <= 1) ? "" : "s");
+	  /* Make sure there is at least one private key on the token */
+	  if (PKCS11_enumerate_keys(tok, &keys, &key_count)) {
+	    fail("unable to enumerate keys\n");
+	  }
+	  if (key_count == 0) {
+	    fail("No keys found.\n");
+	  }
+	  
+	  if (verbose) {
+	    fprintf(stderr, "Found %u key%s:\n", key_count,
+		    (key_count <= 1) ? "" : "s");
+	  }
+	} else {
+	  
+	  /* Make sure there is at least one public key on the token */
+	  if (PKCS11_enumerate_public_keys(tok, &keys, &key_count)) {
+	    fail("unable to enumerate public keys\n");
+	  }
+	  if (key_count == 0) {
+	    fail("No public keys found.\n");
+	  }
+	  
+	  if (verbose) {
+	    fprintf(stderr, "Found %u public key%s:\n", key_count,
+		    (key_count <= 1) ? "" : "s");
+	  }
 	}
+	
 	if (s_slot_key_id && *s_slot_key_id && (key_id_len != 0 || key_label != NULL)) {
 		for (n = 0; n < key_count; n++) {
 			PKCS11_KEY *k = keys + n;
@@ -1031,7 +1056,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	} else {
 		/*pk = PKCS11_get_public_key(&keys[0]);
 		   need a get_public_key? */
-		pk = PKCS11_get_private_key(selected_key);
+		pk = PKCS11_get_public_key(selected_key);
 	}
 	if (key_label != NULL)
 		free(key_label);
