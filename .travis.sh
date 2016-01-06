@@ -33,6 +33,7 @@ install_from_github() {
     sudo -E make install
     cd ..
     echo "$2 installed"
+    sudo ldconfig
 }
 
 # ppa:pkg-opendnssec provides a less-obsolete softhsm
