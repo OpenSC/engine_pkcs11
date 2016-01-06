@@ -56,14 +56,14 @@ static UI_METHOD *ui_console_with_default = NULL;
 
 static int ui_read(UI *ui, UI_STRING *uis)
 {
-	if (UI_get_input_flags(uis) & UI_INPUT_FLAG_DEFAULT_PWD
-	    && UI_get0_user_data(ui)) {
+	if (UI_get_input_flags(uis) & UI_INPUT_FLAG_DEFAULT_PWD &&
+			UI_get0_user_data(ui)) {
 		switch (UI_get_string_type(uis)) {
 		case UIT_PROMPT:
 		case UIT_VERIFY:
 		{
 			/* If there is a default PIN, use it
-			   instead of reading from the console */
+			 * instead of reading from the console */
 			const char *password =
 				((const char *)UI_get0_user_data(ui));
 			if (password && password[0] != '\0') {
@@ -80,14 +80,14 @@ static int ui_read(UI *ui, UI_STRING *uis)
 
 static int ui_write(UI *ui, UI_STRING *uis)
 {
-	if (UI_get_input_flags(uis) & UI_INPUT_FLAG_DEFAULT_PWD
-	    && UI_get0_user_data(ui)) {
+	if (UI_get_input_flags(uis) & UI_INPUT_FLAG_DEFAULT_PWD &&
+			UI_get0_user_data(ui)) {
 		switch (UI_get_string_type(uis)) {
 		case UIT_PROMPT:
 		case UIT_VERIFY:
 		{
 			/* If there is a default PIN, just
-			   return without outputing any prompt */
+			 * return without outputing any prompt */
 			const char *password =
 				((const char *)UI_get0_user_data(ui));
 			if (password && password[0] != '\0')
@@ -110,13 +110,13 @@ static void setup_ui()
 
 	ui_console_with_default = UI_create_method("Reader with possible default");
 	UI_method_set_opener(ui_console_with_default,
-			     UI_method_get_opener(default_method));
+		UI_method_get_opener(default_method));
 	UI_method_set_reader(ui_console_with_default, ui_read);
 	UI_method_set_writer(ui_console_with_default, ui_write);
 	UI_method_set_flusher(ui_console_with_default,
-			      UI_method_get_flusher(default_method));
+		UI_method_get_flusher(default_method));
 	UI_method_set_closer(ui_console_with_default,
-			     UI_method_get_closer(default_method));
+		UI_method_get_closer(default_method));
 }
 
 
@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 
 	ENGINE_load_builtin_engines();
 	e = ENGINE_by_id("pkcs11");
-	if (!e) {
+	if (e == NULL) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
@@ -223,8 +223,8 @@ int main(int argc, char **argv)
 	}
 
 	private_key = ENGINE_load_private_key(e, private_key_name,
-					      ui_method, ui_extra);
-	if (!private_key) {
+		ui_method, ui_extra);
+	if (private_key == NULL) {
 		fprintf(stderr, "cannot load: %s\n", private_key_name);
 		display_openssl_errors(__LINE__);
 		exit(1);
@@ -233,18 +233,18 @@ int main(int argc, char **argv)
 	x509_name = "cert.der";
 
 	b = BIO_new_file(x509_name, "rb");
-	if (!b) {
+	if (b == NULL) {
 		fprintf(stderr, "error loading %s\n", x509_name);
 		exit(1);
 	}
 
 	x509 = d2i_X509_bio(b, NULL);	/* Binary encoded X.509 */
-	if (!x509) {
+	if (x509 == NULL) {
 		BIO_reset(b);
 		x509 = PEM_read_bio_X509(b, NULL, NULL, NULL);	/* PEM encoded X.509 */
 	}
 
-	if (!x509) {
+	if (x509 == NULL) {
 		fprintf(stderr, "error loading cert %s\n", x509_name);
 		exit(1);
 	}

@@ -87,7 +87,7 @@
 
 static int pkcs11_engine_destroy(ENGINE * e);
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
-			      void (*f) ());
+	void (*f) ());
 
 /* The definitions for control commands specific to this engine */
 
@@ -95,40 +95,39 @@ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 
 static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 	{CMD_SO_PATH,
-	 "SO_PATH",
-	 "Specifies the path to the 'pkcs11-engine' shared library",
-	 ENGINE_CMD_FLAG_STRING},
+		"SO_PATH",
+		"Specifies the path to the 'pkcs11-engine' shared library",
+		ENGINE_CMD_FLAG_STRING},
 	{CMD_MODULE_PATH,
-	 "MODULE_PATH",
-	 "Specifies the path to the pkcs11 module shared library",
-	 ENGINE_CMD_FLAG_STRING},
+		"MODULE_PATH",
+		"Specifies the path to the pkcs11 module shared library",
+		ENGINE_CMD_FLAG_STRING},
 	{CMD_PIN,
-	 "PIN",
-	 "Specifies the pin code",
-	 ENGINE_CMD_FLAG_STRING},
+		"PIN",
+		"Specifies the pin code",
+		ENGINE_CMD_FLAG_STRING},
 	{CMD_VERBOSE,
-	 "VERBOSE",
-	 "Print additional details",
-	 ENGINE_CMD_FLAG_NO_INPUT},
+		"VERBOSE",
+		"Print additional details",
+		ENGINE_CMD_FLAG_NO_INPUT},
 	{CMD_QUIET,
-	 "QUIET",
-	 "Remove additional details",
-	 ENGINE_CMD_FLAG_NO_INPUT},
+		"QUIET",
+		"Remove additional details",
+		ENGINE_CMD_FLAG_NO_INPUT},
 	{CMD_LOAD_CERT_CTRL,
-	 "LOAD_CERT_CTRL",
-	 "Get the certificate from card",
-	 ENGINE_CMD_FLAG_INTERNAL},
+		"LOAD_CERT_CTRL",
+		"Get the certificate from card",
+		ENGINE_CMD_FLAG_INTERNAL},
 	{CMD_INIT_ARGS,
-	 "INIT_ARGS",
-	 "Specifies additional initialization arguments to the pkcs11 module",
-	 ENGINE_CMD_FLAG_STRING},
+		"INIT_ARGS",
+		"Specifies additional initialization arguments to the pkcs11 module",
+		ENGINE_CMD_FLAG_STRING},
 	{0, NULL, NULL, 0}
 };
 
 /* Destructor */
 static int pkcs11_engine_destroy(ENGINE * e)
 {
-	
 #ifndef OPENSSL_NO_EC
 #ifndef OPENSSL_NO_ECDSA
 	PKCS11_ecdsa_method_free();
@@ -139,7 +138,7 @@ static int pkcs11_engine_destroy(ENGINE * e)
 }
 
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
-			      void (*f) ())
+		void (*f) ())
 {
 	/*int initialised = ((pkcs11_dso == NULL) ? 0 : 1); */
 	switch (cmd) {
@@ -182,25 +181,25 @@ static int pkcs11_engine_rsa_finish(RSA * rsa)
 static int bind_helper(ENGINE * e)
 {
 	if (!ENGINE_set_id(e, PKCS11_ENGINE_ID) ||
-	    !ENGINE_set_destroy_function(e, pkcs11_engine_destroy) ||
-	    !ENGINE_set_init_function(e, pkcs11_init) ||
-	    !ENGINE_set_finish_function(e, pkcs11_finish) ||
-	    !ENGINE_set_ctrl_function(e, pkcs11_engine_ctrl) ||
-	    !ENGINE_set_cmd_defns(e, pkcs11_cmd_defns) ||
-	    !ENGINE_set_name(e, PKCS11_ENGINE_NAME) ||
+			!ENGINE_set_destroy_function(e, pkcs11_engine_destroy) ||
+			!ENGINE_set_init_function(e, pkcs11_init) ||
+			!ENGINE_set_finish_function(e, pkcs11_finish) ||
+			!ENGINE_set_ctrl_function(e, pkcs11_engine_ctrl) ||
+			!ENGINE_set_cmd_defns(e, pkcs11_cmd_defns) ||
+			!ENGINE_set_name(e, PKCS11_ENGINE_NAME) ||
 #ifndef OPENSSL_NO_RSA
-	    !ENGINE_set_RSA(e, PKCS11_get_rsa_method()) ||
+			!ENGINE_set_RSA(e, PKCS11_get_rsa_method()) ||
 #endif
 #ifndef OPENSSL_NO_EC
 #ifndef OPENSSL_NO_ECDSA
-		!ENGINE_set_ECDSA(e, PKCS11_get_ecdsa_method()) ||
-#endif 
-/* TODO add ECDH 
-		!ENGINE_set_ECDH(e, PKCS11_get_ecdh_method()) ||
+			!ENGINE_set_ECDSA(e, PKCS11_get_ecdsa_method()) ||
+#endif
+/* TODO add ECDH
+			!ENGINE_set_ECDH(e, PKCS11_get_ecdh_method()) ||
 */
 #endif
-	    !ENGINE_set_load_pubkey_function(e, pkcs11_load_public_key) ||
-	    !ENGINE_set_load_privkey_function(e, pkcs11_load_private_key)) {
+			!ENGINE_set_load_pubkey_function(e, pkcs11_load_public_key) ||
+			!ENGINE_set_load_privkey_function(e, pkcs11_load_private_key)) {
 		return 0;
 	} else {
 		return 1;
