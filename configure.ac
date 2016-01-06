@@ -116,7 +116,7 @@ PKG_CHECK_MODULES(
 	[]
 )
 
-PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.5],, [AC_MSG_ERROR([libp11 >= 0.2.5 is required])])
+PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.3.1],, [AC_MSG_ERROR([libp11 >= 0.3.1 is required])])
 
 saved_LIBS=$LIBS
 LIBS="$LIBP11_LIBS"
