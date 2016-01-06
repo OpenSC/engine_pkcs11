@@ -19,7 +19,7 @@
 
 mkdir -p $outdir
 
-for i in /usr/lib64/pkcs11 /usr/lib/softhsm /usr/lib/x86_64-linux-gnu/softhsm /usr/lib /usr/lib64/softhsm;do
+for i in /usr/lib64/pkcs11 /usr/lib/softhsm /usr/local/lib/softhsm /opt/local/lib/softhsm /usr/lib/x86_64-linux-gnu/softhsm /usr/lib /usr/lib64/softhsm;do
 	if test -f "$i/libsofthsm2.so"; then
 		ADDITIONAL_PARAM="$i/libsofthsm2.so"
 		break
@@ -31,13 +31,23 @@ for i in /usr/lib64/pkcs11 /usr/lib/softhsm /usr/lib/x86_64-linux-gnu/softhsm /u
 	fi
 done
 
-if ! test -x /usr/bin/pkcs11-tool;then
+if (! test -x /usr/bin/pkcs11-tool && ! test -x /usr/local/bin/pkcs11-tool);then
 	exit 77
 fi
 
 init_card () {
 	PIN="$1"
 	PUK="$2"
+
+	if test -x "/usr/local/bin/softhsm2-util"; then
+		export SOFTHSM2_CONF="$outdir/softhsm-testpkcs11.config"
+		SOFTHSM_TOOL="/usr/local/bin/softhsm2-util"
+	fi
+
+	if test -x "/opt/local/bin/softhsm2-util"; then
+		export SOFTHSM2_CONF="$outdir/softhsm-testpkcs11.config"
+		SOFTHSM_TOOL="/opt/local/bin/softhsm2-util"
+	fi
 
 	if test -x "/usr/bin/softhsm2-util"; then
 		export SOFTHSM2_CONF="$outdir/softhsm-testpkcs11.config"
@@ -81,6 +91,11 @@ init_card $PIN $PUK
 
 # generate key in token
 pkcs11-tool -p $PIN --module $ADDITIONAL_PARAM -d 00010203 -a server-key -l -w ${file_dir}/key.der -y privkey >/dev/null
+if test $? != 0;then
+	exit 1;
+fi
+
+pkcs11-tool -p $PIN --module $ADDITIONAL_PARAM -d 00010203 -a server-key -l -w ${file_dir}/pubkey.der -y pubkey >/dev/null
 if test $? != 0;then
 	exit 1;
 fi
