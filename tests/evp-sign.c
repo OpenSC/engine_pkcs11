@@ -41,7 +41,7 @@
 #include <openssl/conf.h>
 
 /* UI method that's only used to fail if get_pin inside engine_pkcs11
-   has failed to pick up in a PIN sent in with ENGINE_ctrl_cmd_string */
+ * has failed to pick up in a PIN sent in with ENGINE_ctrl_cmd_string */
 static UI_METHOD *ui_detect_failed_ctrl = NULL;
 
 static int ui_open_fail(UI *ui)
@@ -51,7 +51,7 @@ static int ui_open_fail(UI *ui)
 }
 
 /* method that's to be used for prompting with a default (which is an
-   alternative to sending in a PIN sent in with ENGINE_ctrl_cmd_string) */
+ * alternative to sending in a PIN sent in with ENGINE_ctrl_cmd_string) */
 static UI_METHOD *ui_console_with_default = NULL;
 
 static int ui_read(UI *ui, UI_STRING *uis)
@@ -220,6 +220,8 @@ int main(int argc, char **argv)
 			display_openssl_errors(__LINE__);
 			exit(1);
 		}
+	default: /* NONE */
+		break;
 	}
 
 	private_key = ENGINE_load_private_key(e, private_key_name,
