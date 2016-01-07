@@ -1,4 +1,4 @@
-version: 0.2.0.{build}
+version: 0.2.1.{build}
 
 platform:
   - x86
@@ -7,7 +7,6 @@ platform:
 configuration:
   - Release
   - Debug
-
 
 environment:
   matrix:
@@ -74,6 +73,7 @@ build_script:
        If ($env:Configuration -Like "*Debug*") {
           Push-AppveyorArtifact src\engine_pkcs11.pdb
        }
+
 cache:
   - C:\OpenSSL-Win32
   - C:\OpenSSL-Win64
