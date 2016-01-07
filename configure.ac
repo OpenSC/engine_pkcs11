@@ -296,3 +296,5 @@ OPENSSL_EXTRA_LDFLAGS:   ${OPENSSL_EXTRA_LDFLAGS}
 ENGINE_LINK:             ${ENGINE_LINK}
 
 EOF
+
+# vim: set noexpandtab:

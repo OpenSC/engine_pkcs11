@@ -24,3 +24,5 @@ dist_doc_DATA = NEWS README.md
 dist-hook:
 	$(MKDIR_P) "$(distdir)/m4"
 	echo > "$(distdir)/packaged"
+
+# vim: set noexpandtab:

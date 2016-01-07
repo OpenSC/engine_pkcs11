@@ -221,3 +221,5 @@ static int bind_fn(ENGINE * e, const char *id)
 
 IMPLEMENT_DYNAMIC_CHECK_FN();
 IMPLEMENT_DYNAMIC_BIND_FN(bind_fn);
+
+/* vim: set noexpandtab: */

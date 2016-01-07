@@ -21,3 +21,4 @@ TESTS_ENVIRONMENT =						\
 	top_builddir="$(top_builddir)"				\
 	srcdir="$(srcdir)"
 
+# vim: set noexpandtab:

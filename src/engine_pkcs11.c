@@ -1076,3 +1076,5 @@ EVP_PKEY *pkcs11_load_private_key(ENGINE * e, const char *s_key_id,
 	}
 	return pk;
 }
+
+/* vim: set noexpandtab: */
