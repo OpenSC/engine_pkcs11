@@ -19,8 +19,8 @@ dist_noinst_DATA = versioninfo.rc
 endif
 libpkcs11_la_CFLAGS = $(AM_CFLAGS) $(OPENSSL_EXTRA_CFLAGS) $(OPENSSL_CFLAGS) \
 	$(LIBP11_CFLAGS)
-libpkcs11_la_LIBADD = $(ENGINE_LINK) $(OPENSSL_LIBS) $(LIBP11_LIBS)
-libpkcs11_la_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_EXTRA_LDFLAGS) \
+libpkcs11_la_LIBADD = $(OPENSSL_LIBS) $(LIBP11_LIBS)
+libpkcs11_la_LDFLAGS = $(AM_LDFLAGS) \
 	-module -shared -avoid-version \
 	-export-symbols "$(srcdir)/engine_pkcs11.exports" \
 	-no-undefined

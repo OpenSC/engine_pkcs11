@@ -51,7 +51,7 @@ case "${host}" in
 			AC_MSG_RESULT([Using cygwin])
 			CPPFLAGS="${CPPFLAGS} -DCRYPTOKI_FORCE_WIN32"
 			WIN_LIBPREFIX="cyg"
-			AC_DEFINE([USE_CYGWIN], [1], [Define if you are on Cygwin])
+			AC_DEFINE([USE_CYGWIN], [1], [Define if you are on Cygwin.])
 		fi
 	;;
 esac
@@ -130,13 +130,20 @@ AC_CHECK_HEADERS([ \
 	locale.h getopt.h dlfcn.h utmp.h \
 ])
 
-PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.3.1],, [AC_MSG_ERROR([libp11 >= 0.3.1 is required])])
+PKG_CHECK_MODULES(
+	[LIBP11],
+	[libp11 >= 0.3.1],
+	,
+	[AC_MSG_ERROR([libp11 >= 0.3.1 is required])])
 
 saved_LIBS=$LIBS
 LIBS="$LIBP11_LIBS"
-AC_CHECK_LIB(p11, PKCS11_ecdsa_method_free, [], [
-AC_DEFINE([OPENSSL_NO_ECDSA], [], [ECDSA support was not detected in libp11])
-])
+AC_CHECK_LIB(
+	[p11],
+	[PKCS11_ecdsa_method_free],
+	,
+	[AC_DEFINE([OPENSSL_NO_ECDSA], [1],
+		[ECDSA support was not detected in libp11.])])
 LIBS=$saved_LIBS
 
 # The "libcrypto" module is not defined in OpenSSL 0.9.7
@@ -149,127 +156,21 @@ PKG_CHECK_MODULES(
 		[OPENSSL],
 		[openssl >= 0.9.7],
 		,
-		[AC_CHECK_LIB(
-			[crypto],
-			[RSA_version],
-			[OPENSSL_LIBS="-lcrypto"],
-			[AC_MSG_ERROR([Cannot find OpenSSL])]
-		)]
+		[AC_MSG_ERROR([libcrypto >= 0.9.7 is required])]
 	)]
 )
-
-# TODO: Deprecate OpenSSL 0.9.7 and get rid of this mess
-
-AC_MSG_CHECKING([for openssl version])
-saved_CPPFLAGS="${CPPFLAGS}"
-CPPFLAGS="${CPPFLAGS} ${OPENSSL_CFLAGS}"
-AC_EGREP_CPP(
-	[new],
-	[
-#include <openssl/opensslv.h>
-#if OPENSSL_VERSION_NUMBER >= 0x0090704fL
-new
-#else
-old
-#endif
-	],
-	[
-		AC_MSG_RESULT([good, 0.9.7d or later])
-		old_openssl="no"
-	],
-	[
-		AC_MSG_RESULT([not so good, 0.9.7d or later would be better])
-		old_openssl="yes"
-	]
-)
-CPPFLAGS="${saved_CPPFLAGS}"
-
-if test "x$old_openssl" = "xyes"; then
-	# openssl found, but version less than 0.9.7d
-	# linking libcrypto.a statically possible?
-
-	saved_CFLAGS="${CFLAGS}"
-	saved_LIBS="${LIBS}"
-	CFLAGS="${CFLAGS} ${OPENSSL_CFLAGS}"
-	if echo "${OPENSSL_LIBS}" | grep -- "-L" > /dev/null; then
-		OPENSSL_DIR="$(echo "${OPENSSL_LIBS}" | ${SED} 's/.*-L\([^ ]*\).*/\1/')"
-	else
-		OPENSSL_DIR="${usrlibdir}"
-	fi
-	LIBS="${LIBS} ${OPENSSL_DIR}/libcrypto.a"
-	AC_CHECK_LIB(
-		[dl],
-		[dlopen]
-	)
-	AC_MSG_CHECKING([should link static openssl])
-	AC_LINK_IFELSE(
-		[AC_LANG_PROGRAM([[
-#include <string.h>
-#include <openssl/opensslv.h>
-#include <openssl/engine.h>
-#include <openssl/rand.h>
-int test(void)
-{
-	char a[2048];
-	ENGINE *e;
-
-	e = ENGINE_new();
-	ENGINE_load_dynamic();
-	if (!e) return 1;
-	memset(a, 0, sizeof(a));
-	RAND_add(a, sizeof(a), sizeof(a));
-	return(RAND_status() <= 0);
-}
-		]])],
-		[
-			AC_MSG_RESULT([yes])
-			ENGINE_LINK="${OPENSSL_DIR}/libcrypto.a"
-		],
-		[AC_MSG_ERROR([OpenSSL is old and cannot link with its static library])]
-	)
-	CFLAGS="${saved_CFLAGS}"
-	LIBS="${saved_LIBS}"
-fi
-
-#@alonbl: This was never actually used.
-#
-# now - last part to do: check if we gain anything from
-# funny parameters to link openssl with.
-#saved_LDFLAGS="${LDFLAGS}"
-#for test_flags in "-Wl,-Bsymbolic" "-G -Wl,-Bsymbolic" "-Wl,-all_load"; do
-#	AC_MSG_CHECKING([whether we can use ${test_flags}])
-#	LDFLAGS="${saved_LDFLAGS} ${test_flags}"
-#	AC_LINK_IFELSE(
-#		[AC_LANG_PROGRAM([[
-#int test()
-#{
-#	return 1;
-#}
-#		]])],
-#		[result="yes"],
-#		[result="no"]
-#	)
-#	AC_MSG_RESULT([${result}])
-#	if test "${result}" = "yes"; then
-#		OPENSSL_EXTRA_LDFLAGS="${test_flags}"
-#		break;
-#	fi
-#done
-#LDFLAGS="${saved_LDFLAGS}"
 
 if test -n "${pkcs11_module}"; then
 	AC_DEFINE_UNQUOTED(
 		[DEFAULT_PKCS11_MODULE],
 		"${pkcs11_module}",
-		[PKCS11 module])
+		[Default PKCS#11 module.])
 fi
 AC_SUBST([enginesdir])
-AC_SUBST([ENGINE_LINK])
 AC_SUBST([ENGINE_PKCS11_VERSION_MAJOR])
 AC_SUBST([ENGINE_PKCS11_VERSION_MINOR])
 AC_SUBST([ENGINE_PKCS11_VERSION_FIX])
 AC_SUBST([WIN_LIBPREFIX])
-AC_SUBST([OPENSSL_EXTRA_LDFLAGS])
 
 AM_CONDITIONAL([WIN32], [test "${WIN32}" = "yes"])
 AM_CONDITIONAL([CYGWIN], [test "${CYGWIN}" = "yes"])
@@ -294,9 +195,9 @@ cat <<EOF
 
 engine_pkcs11 has been configured with the following options:
 
-
 Version:                 ${PACKAGE_VERSION}
-Libraries:               $(eval eval eval echo "${libdir}")
+Installation directory:  ${enginesdir}
+Default PKCS11 module:   ${pkcs11_module}
 
 Host:                    ${host}
 Compiler:                ${CC}
@@ -305,15 +206,10 @@ Compiler flags:          ${CFLAGS}
 Linker flags:            ${LDFLAGS}
 Libraries:               ${LIBS}
 
-enginesdir               ${enginesdir}
-DEFAULT_PKCS11_MODULE    ${pkcs11_module}
-
 LIBP11_CFLAGS:           ${LIBP11_CFLAGS}
 LIBP11_LIBS:             ${LIBP11_LIBS}
 OPENSSL_CFLAGS:          ${OPENSSL_CFLAGS}
 OPENSSL_LIBS:            ${OPENSSL_LIBS}
-OPENSSL_EXTRA_LDFLAGS:   ${OPENSSL_EXTRA_LDFLAGS}
-ENGINE_LINK:             ${ENGINE_LINK}
 
 EOF
 
