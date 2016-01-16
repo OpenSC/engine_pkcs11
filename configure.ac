@@ -72,7 +72,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_WITH(
 	[enginesdir],
-	[AS_HELP_STRING([--with-enginesdir],[OpenSSL engines directory @<:@LIBDIR/engines@:>@])],
+	[AS_HELP_STRING([--with-enginesdir], [OpenSSL engines directory])],
 	[enginesdir="${withval}"],
 	[libcryptodir="`$PKG_CONFIG --variable=libdir --silence-errors libcrypto || \
 		$PKG_CONFIG --variable=libdir openssl`"
