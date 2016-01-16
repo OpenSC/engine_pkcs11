@@ -93,6 +93,12 @@ AC_ARG_WITH(
 	fi]
 )
 
+AC_ARG_WITH(
+	[pkcs11-module],
+	[AS_HELP_STRING([--with-pkcs11-module], [default PKCS11 module])],
+	[pkcs11_module="${withval}"],
+	[pkcs11_module="`$PKG_CONFIG --variable=proxy_module --silence-errors p11-kit-1`"])
+
 dnl Checks for programs.
 AC_PROG_CPP
 AC_PROG_INSTALL
@@ -123,14 +129,6 @@ AC_CHECK_HEADERS([ \
 	string.h strings.h sys/time.h unistd.h \
 	locale.h getopt.h dlfcn.h utmp.h \
 ])
-
-PKG_CHECK_MODULES(
-	[P11KIT],
-	[p11-kit-1],
-	[proxy_module="`$PKG_CONFIG --variable=proxy_module p11-kit-1`"
-	 AC_DEFINE_UNQUOTED([DEFAULT_PKCS11_MODULE], "${proxy_module}", [p11-kit proxy])],
-	[]
-)
 
 PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.3.1],, [AC_MSG_ERROR([libp11 >= 0.3.1 is required])])
 
@@ -259,7 +257,12 @@ fi
 #done
 #LDFLAGS="${saved_LDFLAGS}"
 
-
+if test -n "${pkcs11_module}"; then
+	AC_DEFINE_UNQUOTED(
+		[DEFAULT_PKCS11_MODULE],
+		"${pkcs11_module}",
+		[PKCS11 module])
+fi
 AC_SUBST([enginesdir])
 AC_SUBST([ENGINE_LINK])
 AC_SUBST([ENGINE_PKCS11_VERSION_MAJOR])
@@ -303,6 +306,7 @@ Linker flags:            ${LDFLAGS}
 Libraries:               ${LIBS}
 
 enginesdir               ${enginesdir}
+DEFAULT_PKCS11_MODULE    ${pkcs11_module}
 
 LIBP11_CFLAGS:           ${LIBP11_CFLAGS}
 LIBP11_LIBS:             ${LIBP11_LIBS}
