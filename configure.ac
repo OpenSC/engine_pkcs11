@@ -74,7 +74,23 @@ AC_ARG_WITH(
 	[enginesdir],
 	[AS_HELP_STRING([--with-enginesdir],[OpenSSL engines directory @<:@LIBDIR/engines@:>@])],
 	[enginesdir="${withval}"],
-	[enginesdir="\$(libdir)/engines"]
+	[libcryptodir="`$PKG_CONFIG --variable=libdir --silence-errors libcrypto || \
+		$PKG_CONFIG --variable=libdir openssl`"
+	case "`$PKG_CONFIG --modversion --silence-errors libcrypto || \
+		$PKG_CONFIG --modversion openssl`" in
+	1.1.*) # Predicted engines directory prefix for OpenSSL 1.1.x
+		debian_ssl_prefix="openssl-1.1.0";;
+	1.0.*) # Engines directory prefix for OpenSSL 1.0.x
+		debian_ssl_prefix="openssl-1.0.0";;
+	*) # Engines directory prefix for OpenSSL 0.9.x
+		debian_ssl_prefix="ssl";;
+	esac
+	if test -d "$libcryptodir/$debian_ssl_prefix/engines"; then
+		# Debian-based OpenSSL package (for example Ubuntu)
+		enginesdir="$libcryptodir/$debian_ssl_prefix/engines"
+	else # Default OpenSSL engines directory
+		enginesdir="$libcryptodir/engines"
+	fi]
 )
 
 dnl Checks for programs.
@@ -125,6 +141,8 @@ AC_DEFINE([OPENSSL_NO_ECDSA], [], [ECDSA support was not detected in libp11])
 ])
 LIBS=$saved_LIBS
 
+# The "libcrypto" module is not defined in OpenSSL 0.9.7
+# TODO: Deprecate OpenSSL 0.9.7 and stop checking for the "openssl" module
 PKG_CHECK_MODULES(
 	[OPENSSL],
 	[libcrypto >= 0.9.7],
@@ -142,9 +160,7 @@ PKG_CHECK_MODULES(
 	)]
 )
 
-# ok, now we might (or not) have ssl and an engine.
-# still room for "improvements", i.e. hacks to work
-# with old engines.
+# TODO: Deprecate OpenSSL 0.9.7 and get rid of this mess
 
 AC_MSG_CHECKING([for openssl version])
 saved_CPPFLAGS="${CPPFLAGS}"

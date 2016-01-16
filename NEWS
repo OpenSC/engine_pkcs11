@@ -1,6 +1,7 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
 New in 0.2.1; unreleased;
+* Fixed OpenSSL engines directory autoselection (Michał Trojnara).
 * Fixed PIN-less access to public keys (Mouse).
 * Require new libp11 0.3.1 for PKCS11_enumerate_public_keys().
 
