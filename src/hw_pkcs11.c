@@ -196,6 +196,7 @@ static int bind_helper(ENGINE * e)
 			!ENGINE_set_ECDSA(e, PKCS11_get_ecdsa_method()) ||
 #endif
 #else
+			/* PKCS11_get_ec_key_method supports ECDH too */
 			!ENGINE_set_EC(e, PKCS11_get_ec_key_method()) ||
 #endif /* OPENSSL_VERSION_NUMBER */
 #endif /* OPENSSL_NO_EC */
