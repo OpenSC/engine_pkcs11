@@ -1,6 +1,8 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
 New in 0.2.1; unreleased;
+* Windows library name updated to "pkcs11.dll" to match other
+  OpenSSL engines (Michał Trojnara)
 * Added "--with-pkcs11-module" configure option; addresses #36
   (Michał Trojnara)
 * Fixed OpenSSL engines directory autoselection (Michał Trojnara)

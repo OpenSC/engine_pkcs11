@@ -13,8 +13,7 @@ OPENSSL_EXTRA_CFLAGS = \
 	-DSHA1_ASM -DMD5_ASM -DRMD160_ASM
 
 libpkcs11_la_SOURCES = \
-	hw_pkcs11.c engine_pkcs11.c engine_pkcs11.h  \
-	engine_pkcs11.exports
+	hw_pkcs11.c engine_pkcs11.c engine_pkcs11.h pkcs11.exports
 if WIN32
 libpkcs11_la_SOURCES += versioninfo.rc
 else
@@ -25,7 +24,7 @@ libpkcs11_la_CFLAGS = $(AM_CFLAGS) $(OPENSSL_EXTRA_CFLAGS) $(OPENSSL_CFLAGS) \
 libpkcs11_la_LIBADD = $(OPENSSL_LIBS) $(LIBP11_LIBS)
 libpkcs11_la_LDFLAGS = $(AM_LDFLAGS) \
 	-module -shared -avoid-version \
-	-export-symbols "$(srcdir)/engine_pkcs11.exports" \
+	-export-symbols "$(srcdir)/pkcs11.exports" \
 	-no-undefined
 
 RCCOMPILE = $(RC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \

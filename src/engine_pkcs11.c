@@ -25,14 +25,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <config.h>
+#include "engine_pkcs11.h"
 #include <stdio.h>
 #include <string.h>
 #include <openssl/crypto.h>
 #include <openssl/objects.h>
 #include <openssl/engine.h>
 #include <libp11.h>
-#include "engine_pkcs11.h"
 
 #ifdef _WIN32
 #define strncasecmp strnicmp

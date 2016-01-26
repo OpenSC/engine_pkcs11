@@ -59,7 +59,7 @@
  *
  */
 
-#include <config.h>
+#include "engine_pkcs11.h"
 #include <stdio.h>
 #include <string.h>
 #include <openssl/opensslv.h>
@@ -72,7 +72,6 @@
 #error did not get engine.h
 #endif
 #include <libp11.h>
-#include "engine_pkcs11.h"
 
 #define PKCS11_ENGINE_ID "pkcs11"
 #define PKCS11_ENGINE_NAME "pkcs11 engine"

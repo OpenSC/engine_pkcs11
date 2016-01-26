@@ -27,6 +27,10 @@
 #ifndef _ENGINE_PKCS11_H
 #define _ENGINE_PKCS11_H
 
+#ifndef _WIN32
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <openssl/crypto.h>
