@@ -33,7 +33,6 @@
 #include <getopt.h>
 #include <err.h>
 #include <arpa/inet.h>
-#include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
@@ -46,6 +45,7 @@ static UI_METHOD *ui_detect_failed_ctrl = NULL;
 
 static int ui_open_fail(UI *ui)
 {
+	(void) ui;
 	fprintf(stderr, "It seems like get_pin fell through even though the pin should already be set!\n");
 	return 0;
 }
@@ -138,27 +138,22 @@ static void display_openssl_errors(int l)
 
 int main(int argc, char **argv)
 {
-	char *hash_algo = NULL;
-	char *private_key_name, *x509_name, *module_name, *dest_name;
+	char *private_key_name, *public_key_name;
 	unsigned char buf[4096];
 	const EVP_MD *digest_algo;
-	EVP_PKEY *private_key, *pubkey;
+	EVP_PKEY *private_key, *public_key;
 	char *key_pass = NULL;
-	X509 *x509;
 	unsigned n;
 	int ret;
-	long errline;
 	ENGINE *e;
-	CONF *conf;
 	EVP_MD_CTX *ctx;
 	const char *module_path, *efile;
-	BIO *in, *b;
 	enum { NONE, BY_DEFAULT, BY_CTRL } pin_method = NONE;
 	UI_METHOD *ui_method = NULL;
 	void *ui_extra = NULL;
 
 	if (argc < 5) {
-		fprintf(stderr, "usage: %s [PIN setting method] [PIN] [CONF] [private key URL] [module]\n", argv[0]);
+		fprintf(stderr, "usage: %s [PIN setting method] [PIN] [CONF] [private key URL] [public key URL] [module]\n", argv[0]);
 		fprintf(stderr, "\n");
 		fprintf(stderr, "PIN setting method can be 'default' or 'ctrl'\n");
 		exit(1);
@@ -173,9 +168,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	key_pass = argv[2];
-	private_key_name = argv[4];
-	module_path = argv[5];
 	efile = argv[3];
+	private_key_name = argv[4];
+	public_key_name = argv[5];
+	module_path = argv[6];
 
 	setup_ui();
 
@@ -232,27 +228,13 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	x509_name = "cert.der";
-
-	b = BIO_new_file(x509_name, "rb");
-	if (b == NULL) {
-		fprintf(stderr, "error loading %s\n", x509_name);
+	public_key = ENGINE_load_public_key(e, public_key_name,
+		ui_method, ui_extra);
+	if (public_key == NULL) {
+		fprintf(stderr, "cannot load: %s\n", public_key_name);
+		display_openssl_errors(__LINE__);
 		exit(1);
 	}
-
-	x509 = d2i_X509_bio(b, NULL);	/* Binary encoded X.509 */
-	if (x509 == NULL) {
-		BIO_reset(b);
-		x509 = PEM_read_bio_X509(b, NULL, NULL, NULL);	/* PEM encoded X.509 */
-	}
-
-	if (x509 == NULL) {
-		fprintf(stderr, "error loading cert %s\n", x509_name);
-		exit(1);
-	}
-	pubkey = X509_get_pubkey(x509);
-
-	BIO_free(b);
 
 	/* Digest the module data. */
 	OpenSSL_add_all_digests();
@@ -287,7 +269,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (EVP_DigestVerifyInit(ctx, NULL, digest_algo, NULL, pubkey) <= 0) {
+	if (EVP_DigestVerifyInit(ctx, NULL, digest_algo, NULL, public_key) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
@@ -303,7 +285,7 @@ int main(int argc, char **argv)
 	}
 	EVP_MD_CTX_destroy(ctx);
 
-	EVP_PKEY_free(pubkey);
+	EVP_PKEY_free(public_key);
 	EVP_PKEY_free(private_key);
 	ENGINE_finish(e);
 	CONF_modules_unload(1);

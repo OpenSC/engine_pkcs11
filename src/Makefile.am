@@ -1,6 +1,9 @@
-MAINTAINERCLEANFILES = \
-	$(srcdir)/Makefile.in $(srcdir)/versioninfo.rc
+MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
 EXTRA_DIST = Makefile.mak versioninfo.rc.in
+
+# ifeq ($(enginesdir),'')
+# enginesdir = INSTALL_DIR
+# endif
 
 engines_LTLIBRARIES = libpkcs11.la
 

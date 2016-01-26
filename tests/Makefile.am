@@ -1,4 +1,4 @@
-EXTRA_DIST = cert.der key.der common.sh engines.cnf.in
+EXTRA_DIST = common.sh engines.cnf.in
 
 AM_CFLAGS = $(OPENSSL_CFLAGS)
 AM_CPPFLAGS = \
@@ -12,6 +12,7 @@ evp_sign_SOURCES = evp-sign.c
 
 check_PROGRAMS = evp-sign
 dist_check_SCRIPTS = softhsm
+dist_check_DATA = cert.der key.der pubkey.der
 
 TESTS = $(dist_check_SCRIPTS)
 

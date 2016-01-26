@@ -15,6 +15,7 @@ MAINTAINERCLEANFILES = \
 	$(srcdir)/packaged
 EXTRA_DIST = .gitignore
 
+# Prerequisites must be first on the list
 SUBDIRS = src tests
 
 dist_noinst_SCRIPTS = bootstrap

@@ -8,7 +8,7 @@ define([PACKAGE_SUFFIX], [_git])
 
 AC_INIT([engine_pkcs11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX[]PACKAGE_SUFFIX])
 AC_CONFIG_AUX_DIR([.])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
 
@@ -17,6 +17,9 @@ ENGINE_PKCS11_VERSION_MINOR="PACKAGE_VERSION_MINOR"
 ENGINE_PKCS11_VERSION_FIX="PACKAGE_VERSION_FIX"
 
 AC_CONFIG_SRCDIR([src/engine_pkcs11.c])
+
+# silent build by default
+ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AC_CANONICAL_HOST
 AC_PROG_CC
@@ -74,23 +77,29 @@ AC_ARG_WITH(
 	[enginesdir],
 	[AS_HELP_STRING([--with-enginesdir], [OpenSSL engines directory])],
 	[enginesdir="${withval}"],
-	[libcryptodir="`$PKG_CONFIG --variable=libdir --silence-errors libcrypto || \
-		$PKG_CONFIG --variable=libdir openssl`"
-	case "`$PKG_CONFIG --modversion --silence-errors libcrypto || \
-		$PKG_CONFIG --modversion openssl`" in
-	1.1.*) # Predicted engines directory prefix for OpenSSL 1.1.x
-		debian_ssl_prefix="openssl-1.1.0";;
-	1.0.*) # Engines directory prefix for OpenSSL 1.0.x
-		debian_ssl_prefix="openssl-1.0.0";;
-	*) # Engines directory prefix for OpenSSL 0.9.x
-		debian_ssl_prefix="ssl";;
-	esac
-	if test -d "$libcryptodir/$debian_ssl_prefix/engines"; then
-		# Debian-based OpenSSL package (for example Ubuntu)
-		enginesdir="$libcryptodir/$debian_ssl_prefix/engines"
-	else # Default OpenSSL engines directory
-		enginesdir="$libcryptodir/engines"
-	fi]
+	[
+		libcryptodir="`$PKG_CONFIG --variable=libdir --silence-errors libcrypto || \
+			$PKG_CONFIG --variable=libdir openssl`"
+		case "`$PKG_CONFIG --modversion --silence-errors libcrypto || \
+			$PKG_CONFIG --modversion openssl`" in
+		1.1.*) # Predicted engines directory prefix for OpenSSL 1.1.x
+			debian_ssl_prefix="openssl-1.1.0";;
+		1.0.*) # Engines directory prefix for OpenSSL 1.0.x
+			debian_ssl_prefix="openssl-1.0.0";;
+		*) # Engines directory prefix for OpenSSL 0.9.x
+			debian_ssl_prefix="ssl";;
+		esac
+		if test -d "$libcryptodir/$debian_ssl_prefix/engines"; then
+			# Debian-based OpenSSL package (for example Ubuntu)
+			enginesdir="$libcryptodir/$debian_ssl_prefix/engines"
+		else # Default OpenSSL engines directory
+			enginesdir="$libcryptodir/engines"
+		fi
+		if test "${prefix}" != "NONE" -o "${exec_prefix}" != "NONE"; then
+			# Override the autodetected value with the default
+			enginesdir="${libdir}"
+		fi
+	]
 )
 
 AC_ARG_WITH(
@@ -166,6 +175,7 @@ if test -n "${pkcs11_module}"; then
 		"${pkcs11_module}",
 		[Default PKCS#11 module.])
 fi
+
 AC_SUBST([enginesdir])
 AC_SUBST([ENGINE_PKCS11_VERSION_MAJOR])
 AC_SUBST([ENGINE_PKCS11_VERSION_MINOR])

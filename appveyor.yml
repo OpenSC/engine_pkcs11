@@ -53,7 +53,6 @@ build_script:
   - bash -c "exec 0</dev/null && ./bootstrap"
   # disable features to speed up the script
   - bash -c "exec 0</dev/null && ./configure OPENSSL_CFLAGS=\"-IC:\OpenSSL-Win32\include -IC:\OpenSSL-Win64\include\" OPENSSL_LIBS=\"-LC:\OpenSSL-Win32 -LC:\OpenSSL-Win64 -leay\" || cat config.log"
-  - cp winconfig.h config.h
   - nmake /f Makefile.mak %NMAKE_ARCH% %NMAKE_EXTRA%
   - appveyor PushArtifact src\libp11.dll
   - appveyor PushArtifact src\libp11.lib

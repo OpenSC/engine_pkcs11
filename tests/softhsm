@@ -16,8 +16,7 @@
 # along with GnuTLS; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-outdir="${srcdir}/output.$$"
-file_dir="${srcdir:-./}"
+outdir="output.$$"
 
 . ${srcdir}/common.sh
 
@@ -26,38 +25,40 @@ file_dir="${srcdir:-./}"
 sed -e "s|@MODULE_PATH@|${ADDITIONAL_PARAM}|g" -e "s|@ENGINE_PATH@|../src/.libs/libpkcs11.so|g" <"${srcdir}/engines.cnf.in" >engines.cnf
 
 export OPENSSL_ENGINES="../src/.libs/"
+PRIVATE_KEY="pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private;pin-value=1234"
+PUBLIC_KEY="pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=public;pin-value=1234"
 
-./evp-sign ctrl false engines.cnf "pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private;pin-value=1234" ${ADDITIONAL_PARAM}
+./evp-sign ctrl false engines.cnf ${PRIVATE_KEY} ${PUBLIC_KEY} ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test, using ctrl failed"
 	exit 1;
 fi
 
-./evp-sign default false engines.cnf "pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private;pin-value=1234" ${ADDITIONAL_PARAM}
+./evp-sign default false engines.cnf ${PRIVATE_KEY} ${PUBLIC_KEY} ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test, using default failed"
 	exit 1;
 fi
 
-./evp-sign ctrl 1234 engines.cnf "pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private" ${ADDITIONAL_PARAM}
+./evp-sign ctrl 1234 engines.cnf ${PRIVATE_KEY} ${PUBLIC_KEY} ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test without pin-value, using ctrl failed"
 	exit 1;
 fi
 
-./evp-sign default 1234 engines.cnf "pkcs11:token=libp11-test;id=%00%01%02%03;object=server-key;type=private" ${ADDITIONAL_PARAM}
+./evp-sign default 1234 engines.cnf ${PRIVATE_KEY} ${PUBLIC_KEY} ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test without pin-value, using default failed"
 	exit 1;
 fi
 
-./evp-sign ctrl 1234 engines.cnf "label_server-key" ${ADDITIONAL_PARAM}
+./evp-sign ctrl 1234 engines.cnf "label_server-key" "label_server-key" ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test with legacy name #1 failed"
 	exit 1;
 fi
 
-./evp-sign default 1234 engines.cnf "id_00010203" ${ADDITIONAL_PARAM}
+./evp-sign default 1234 engines.cnf "id_00010203" "id_00010203" ${ADDITIONAL_PARAM}
 if test $? != 0;then
 	echo "Basic PKCS #11 test with legacy name #2 failed"
 	exit 1;
