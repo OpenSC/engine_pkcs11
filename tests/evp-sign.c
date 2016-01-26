@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 	long errline;
 	ENGINE *e;
 	CONF *conf;
-	EVP_MD_CTX ctx;
+	EVP_MD_CTX *ctx;
 	const char *module_path, *efile;
 	BIO *in, *b;
 	enum { NONE, BY_DEFAULT, BY_CTRL } pin_method = NONE;
@@ -260,46 +260,48 @@ int main(int argc, char **argv)
 
 	digest_algo = EVP_get_digestbyname("sha1");
 
-	EVP_MD_CTX_init(&ctx);
-	if (EVP_DigestInit(&ctx, digest_algo) <= 0) {
+	ctx = EVP_MD_CTX_create();
+	if (EVP_DigestInit(ctx, digest_algo) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
 
-	EVP_SignInit(&ctx, digest_algo);
+	EVP_SignInit(ctx, digest_algo);
 
 #define TEST_DATA "test data"
-	if (EVP_SignUpdate(&ctx, TEST_DATA, sizeof(TEST_DATA)) <= 0) {
+	if (EVP_SignUpdate(ctx, TEST_DATA, sizeof(TEST_DATA)) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
 
 	n = sizeof(buf);
-	if (EVP_SignFinal(&ctx, buf, &n, private_key) <= 0) {
+	if (EVP_SignFinal(ctx, buf, &n, private_key) <= 0) {
+		display_openssl_errors(__LINE__);
+		exit(1);
+	}
+	EVP_MD_CTX_destroy(ctx);
+
+	ctx = EVP_MD_CTX_create();
+	if (EVP_DigestInit(ctx, digest_algo) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
 
-	EVP_MD_CTX_init(&ctx);
-	if (EVP_DigestInit(&ctx, digest_algo) <= 0) {
+	if (EVP_DigestVerifyInit(ctx, NULL, digest_algo, NULL, pubkey) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
 
-	if (EVP_DigestVerifyInit(&ctx, NULL, digest_algo, NULL, pubkey) <= 0) {
+	if (EVP_DigestVerifyUpdate(ctx, TEST_DATA, sizeof(TEST_DATA)) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
 
-	if (EVP_DigestVerifyUpdate(&ctx, TEST_DATA, sizeof(TEST_DATA)) <= 0) {
+	if (EVP_DigestVerifyFinal(ctx, buf, n) <= 0) {
 		display_openssl_errors(__LINE__);
 		exit(1);
 	}
-
-	if (EVP_DigestVerifyFinal(&ctx, buf, n) <= 0) {
-		display_openssl_errors(__LINE__);
-		exit(1);
-	}
+	EVP_MD_CTX_destroy(ctx);
 
 	EVP_PKEY_free(pubkey);
 	EVP_PKEY_free(private_key);
