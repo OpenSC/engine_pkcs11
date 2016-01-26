@@ -127,6 +127,7 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 /* Destructor */
 static int pkcs11_engine_destroy(ENGINE * e)
 {
+	(void)e;
 #ifndef OPENSSL_NO_EC
 #ifndef OPENSSL_NO_ECDSA
 	PKCS11_ecdsa_method_free();
@@ -139,6 +140,8 @@ static int pkcs11_engine_destroy(ENGINE * e)
 static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 		void (*f) ())
 {
+	(void)i; /* We don't currently take integer parameters */
+	(void)f; /* We don't currently take callback parameters */
 	/*int initialised = ((pkcs11_dso == NULL) ? 0 : 1); */
 	switch (cmd) {
 	case CMD_MODULE_PATH:
@@ -156,24 +159,6 @@ static int pkcs11_engine_ctrl(ENGINE * e, int cmd, long i, void *p,
 	}
 	return 0;
 }
-
-#if 0
-/* set up default rsa_meth_st with overloaded rsa functions */
-/* the actual implementation needs to be in another object */
-
-static int (*orig_finish) (RSA * rsa);
-
-static int pkcs11_engine_rsa_finish(RSA * rsa)
-{
-
-	pkcs11_rsa_finish(rsa);
-
-	if (orig_finish)
-		orig_finish(rsa);
-	return 1;
-
-}
-#endif
 
 /* This internal function is used by ENGINE_pkcs11() and possibly by the
  * "dynamic" ENGINE support too */

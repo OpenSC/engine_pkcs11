@@ -160,6 +160,15 @@ int set_init_args(const char *init_args_orig)
 
 int pkcs11_finish(ENGINE * engine)
 {
+	/*
+	 * TODO: Retrieve the libp11 context with:
+	 *   ctx = ENGINE_get_ex_data(e, pkcs11_idx);
+	 * , free it, and set to NULL with:
+	 *   ENGINE_set_ex_data(e, pkcs11_idx, NULL);
+	 * instead of using a global context
+	 */
+	(void)engine;
+
 	if (ctx) {
 		PKCS11_CTX_unload(ctx);
 		PKCS11_CTX_free(ctx);
@@ -172,6 +181,13 @@ int pkcs11_finish(ENGINE * engine)
 int pkcs11_init(ENGINE * engine)
 {
 	char *mod = module;
+
+	/*
+	 * TODO: Save the libp11 context with:
+	 *   ENGINE_set_ex_data(e, pkcs11_idx, ctx);
+	 * instead of using a global context
+	 */
+	(void)engine;
 
 #ifdef DEFAULT_PKCS11_MODULE
 	if (mod == NULL)
@@ -186,17 +202,6 @@ int pkcs11_init(ENGINE * engine)
 		fprintf(stderr, "Unable to load module %s\n", mod);
 		return 0;
 	}
-	return 1;
-}
-
-int pkcs11_rsa_finish(RSA * rsa)
-{
-	zero_pin();
-	if (module) {
-		free(module);
-		module = NULL;
-	}
-	/* need to free RSA_ex_data? */
 	return 1;
 }
 
@@ -512,7 +517,7 @@ static int parse_pkcs11_uri(const char *uri, PKCS11_TOKEN **p_tok,
 /* prototype for OpenSSL ENGINE_load_cert */
 /* used by load_cert_ctrl via ENGINE_ctrl for now */
 
-static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
+static X509 *pkcs11_load_cert(ENGINE * engine, const char *s_slot_cert_id)
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_SLOT *found_slot = NULL;
@@ -527,6 +532,13 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 	size_t tmp_pin_len = sizeof(tmp_pin);
 	int slot_nr = -1;
 	char flags[64];
+
+	/*
+	 * TODO: Retrieve the libp11 context with:
+	 *   ctx = ENGINE_get_ex_data(e, pkcs11_idx);
+	 * instead of using a global context
+	 */
+	(void)engine;
 
 	if (s_slot_cert_id && *s_slot_cert_id) {
 		if (!strncmp(s_slot_cert_id, "pkcs11:", 7)) {
@@ -602,7 +614,7 @@ static X509 *pkcs11_load_cert(ENGINE * e, const char *s_slot_cert_id)
 		}
 
 		if (slot_nr != -1 &&
-			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
+			slot_nr == (int)PKCS11_get_slotid_from_slot(slot)) {
 			found_slot = slot;
 		}
 		if (match_tok && slot->token &&
@@ -791,9 +803,8 @@ static int pkcs11_login(PKCS11_SLOT *slot, PKCS11_TOKEN *tok,
 	return 1;
 }
 
-static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
-		UI_METHOD * ui_method, void *callback_data,
-		int isPrivate)
+static EVP_PKEY *pkcs11_load_key(ENGINE * engine, const char *s_slot_key_id,
+		UI_METHOD * ui_method, void *callback_data, int isPrivate)
 {
 	PKCS11_SLOT *slot_list, *slot;
 	PKCS11_SLOT *found_slot = NULL;
@@ -809,6 +820,13 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 	char tmp_pin[MAX_PIN_LENGTH];
 	size_t tmp_pin_len = sizeof(tmp_pin);
 	char flags[64];
+
+	/*
+	 * TODO: Retrieve the libp11 context with:
+	 *   ctx = ENGINE_get_ex_data(e, pkcs11_idx);
+	 * instead of using a global context
+	 */
+	(void)engine;
 
 	if (verbose)
 		fprintf(stderr, "Loading %s key \"%s\"\n",
@@ -889,7 +907,7 @@ static EVP_PKEY *pkcs11_load_key(ENGINE * e, const char *s_slot_key_id,
 		}
 
 		if (slot_nr != -1 &&
-			slot_nr == PKCS11_get_slotid_from_slot(slot)) {
+			slot_nr == (int)PKCS11_get_slotid_from_slot(slot)) {
 			found_slot = slot;
 		}
 		if (match_tok && slot->token &&
