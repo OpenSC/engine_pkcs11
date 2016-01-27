@@ -1,14 +1,13 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
-New in 0.2.1; unreleased;
-* Windows library name updated to "pkcs11.dll" to match other
-  OpenSSL engines (Michał Trojnara)
+New in 0.2.1; 2016-01-27; Michał Trojnara
+* Fixed PIN-less access to public keys (Mouse)
+* Added OpenSSL engines directory autodetection (Michał Trojnara)
 * Added "--with-pkcs11-module" configure option; addresses #36
   (Michał Trojnara)
-* Fixed OpenSSL engines directory autoselection (Michał Trojnara)
-* Fixed PIN-less access to public keys (Mouse)
-* Require new libp11 0.3.1 for PKCS11_enumerate_public_keys()
-  (Michał Trojnara)
+* Windows library name updated to "pkcs11.dll" to match other
+  OpenSSL engines (Michał Trojnara)
+* Require the new libp11 0.3.1 library (Michał Trojnara)
 
 New in 0.2.0; 2015-10-09; Nikos Mavrogiannopoulos
 * Added support for ECDSA when compiled with libp11 0.3.0
@@ -34,7 +33,7 @@ New in 0.1.6; 2009-06-15; Andreas Jellinghaus
 * Fixed set_pin (strdup causes segfault in OPENSSL_CLEANSE later)
 * Require new libp11 0.2.5 with new function to get the slot id.
 * Revert changes to slot parsing code - seems partial bogus and
-  orginal author doesn't respond to questions.
+  original author doesn't respond to questions.
 * print slot id in verbose mode (Douglas E. Engert).
 
 New in 0.1.5; 2008-07-31; Andreas Jellinghaus
