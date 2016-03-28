@@ -181,6 +181,7 @@ int pkcs11_finish(ENGINE * engine)
 int pkcs11_init(ENGINE * engine)
 {
 	char *mod = module;
+	int rc;
 
 	/*
 	 * TODO: Save the libp11 context with:
@@ -197,8 +198,14 @@ int pkcs11_init(ENGINE * engine)
 		fprintf(stderr, "Initializing engine\n");
 	}
 	ctx = PKCS11_CTX_new();
-        PKCS11_CTX_init_args(ctx, init_args);
-	if (PKCS11_CTX_load(ctx, mod) < 0) {
+	PKCS11_CTX_init_args(ctx, init_args);
+
+	/* Temporarily unlock non-recursive CRYPTO_LOCK_ENGINE to prevent
+	 * double-locking in C_GetSlotList() while loading p11-kit */
+	CRYPTO_w_unlock(CRYPTO_LOCK_ENGINE);
+	rc = PKCS11_CTX_load(ctx, mod);
+	CRYPTO_w_lock(CRYPTO_LOCK_ENGINE);
+	if (rc < 0) {
 		fprintf(stderr, "Unable to load module %s\n", mod);
 		return 0;
 	}
