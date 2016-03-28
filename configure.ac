@@ -3,7 +3,7 @@ AC_PREREQ(2.60)
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [2])
-define([PACKAGE_VERSION_FIX], [1])
+define([PACKAGE_VERSION_FIX], [2])
 define([PACKAGE_SUFFIX], [])
 
 AC_INIT([engine_pkcs11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX[]PACKAGE_SUFFIX])
@@ -144,16 +144,6 @@ PKG_CHECK_MODULES(
 	[libp11 >= 0.3.1],
 	,
 	[AC_MSG_ERROR([libp11 >= 0.3.1 is required])])
-
-saved_LIBS=$LIBS
-LIBS="$LIBP11_LIBS"
-AC_CHECK_LIB(
-	[p11],
-	[PKCS11_ecdsa_method_free],
-	,
-	[AC_DEFINE([OPENSSL_NO_ECDSA], [1],
-		[ECDSA support was not detected in libp11.])])
-LIBS=$saved_LIBS
 
 # The "libcrypto" module is not defined in OpenSSL 0.9.7
 # TODO: Deprecate OpenSSL 0.9.7 and stop checking for the "openssl" module

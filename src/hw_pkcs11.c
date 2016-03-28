@@ -128,12 +128,6 @@ static const ENGINE_CMD_DEFN pkcs11_cmd_defns[] = {
 static int pkcs11_engine_destroy(ENGINE * e)
 {
 	(void)e;
-#ifndef OPENSSL_NO_EC
-#ifndef OPENSSL_NO_ECDSA
-	PKCS11_ecdsa_method_free();
-#endif
-#endif
-
 	return 1;
 }
 
