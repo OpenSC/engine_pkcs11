@@ -1,5 +1,8 @@
 NEWS for Engine PKCS#11 -- History of user visible changes
 
+New in 0.2.2; 2016-03-28; Michał Trojnara
+* Workaround for double locking the global engine lock (Michał Trojnara)
+
 New in 0.2.1; 2016-01-27; Michał Trojnara
 * Fixed PIN-less access to public keys (Mouse)
 * Added OpenSSL engines directory autodetection (Michał Trojnara)
