@@ -31,6 +31,7 @@
 #include <openssl/crypto.h>
 #include <openssl/objects.h>
 #include <openssl/engine.h>
+#include <openssl/ui.h>
 #include <libp11.h>
 
 #ifdef _WIN32
@@ -51,7 +52,7 @@ static PKCS11_CTX *ctx;
 static char *pin = NULL;
 static int pin_length = 0;
 
-static int verbose = 0;
+static int verbose = 1; /* TODO reset to 0 after testing */
 
 static char *module = NULL;
 
@@ -194,6 +195,14 @@ int pkcs11_init(ENGINE * engine)
 	if (mod == NULL)
 		mod = DEFAULT_PKCS11_MODULE;
 #endif
+	
+	if (!mod) {
+	    mod = getenv("PKCS11_MODULE_PATH");
+	}
+	if (!mod) {
+	    mod = "/opt/smartcard/lib/opensc-pkcs11.so";
+	}
+
 	if (verbose) {
 		fprintf(stderr, "Initializing engine\n");
 	}
