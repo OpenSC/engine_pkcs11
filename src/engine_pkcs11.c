@@ -752,7 +752,7 @@ int load_cert_ctrl(ENGINE * e, void *p)
 }
 
 /*
- * Log-into the token if necesary.
+ * Log-into the token if necessary.
  *
  * @slot is PKCS11 slot to log in
  * @tok is PKCS11 token to log in (??? could be derived as @slot->token)
